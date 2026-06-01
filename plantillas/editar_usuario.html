@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Editar Usuario</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light p-4">
+    <div class="container mt-5">
+        <div class="card shadow mx-auto" style="max-width: 500px;">
+            <div class="card-header bg-warning">
+                <h4 class="mb-0">Editar Usuario: {{ u.username }}</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="fw-bold">Nueva Contraseña</label>
+                        <input type="password" name="password" class="form-control" placeholder="Escribe aquí para cambiarla...">
+                        <small class="text-muted">Si dejas este campo en blanco, la contraseña actual no se modificará.</small>
+                    </div>
+                    <div class="mb-4">
+                        <label class="fw-bold">Rol en el Sistema</label>
+                        <select name="rol" class="form-select">
+                            <option value="Vendedor" {% if u.rol == 'Vendedor' %}selected{% endif %}>Vendedor</option>
+                            <option value="Bodeguero" {% if u.rol == 'Bodeguero' %}selected{% endif %}>Bodeguero</option>
+                            <option value="Administrador" {% if u.rol == 'Administrador' %}selected{% endif %}>Administrador</option>
+                        </select>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('usuarios') }}" class="btn btn-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-success">Guardar Cambios</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
