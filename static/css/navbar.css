@@ -1,0 +1,42 @@
+.btn-outline {
+  background-color: #1c36fb;
+  color: white;
+  border: none;
+}
+
+.btn-outline:hover {
+  background-color: #1429c7;
+  color: white;
+}
+
+.usuario-panel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: white;
+}
+
+.usuario-panel i {
+  font-size: 2rem;
+}
+
+.usuario-panel div div {
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.usuario-panel small {
+  color: #cfd3d7;
+}
+
+.btn-outline {
+  background: #1c36fb;
+  color: white;
+  border: 1px solid #1c36fb;
+}
+
+.btn-outline:hover {
+  background: #1429c7;
+  color: white;
+  border-color: #1429c7;
+}

@@ -1,57 +1,105 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
     <title>Categorías - Equi-Parts S&S</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
-    <nav class="navbar navbar-dark bg-dark mb-4 p-2">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="{{ url_for('inventario') }}">← Volver al Inventario</a>
-        </div>
-    </nav>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/categorias.css') }}"
+    />
+  </head>
+  <body class="bg-light">
+    {% include 'includes/navbar.html' %} {% with messages =
+    get_flashed_messages(with_categories=true) %} {% if messages %} {% for
+    category, message in messages %}
+    <div class="alert alert-{{ category }}">{{ message }}</div>
+    {% endfor %} {% endif %} {% endwith %}
     <div class="container">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            {% for category, message in messages %}<div class="alert alert-{{ category }}">{{ message }}</div>{% endfor %}
-          {% endif %}
-        {% endwith %}
+      <div class="row g-4">
+        <div class="col-md-4">
+          <div class="card shadow ms-4">
+            <div class="card-header bg-primary text-white">
+              <i class="bi bi-tags me-2"></i>
+              Nueva Categoría
+            </div>
+            <div class="card-body">
+              <p class="text-muted small mb-3">
+                Registre nuevas categorías para organizar los repuestos del
+                inventario.
+              </p>
+              <form method="POST">
+                <div class="input-group mb-3">
+                  <span class="input-group-text">
+                    <i class="bi bi-tag"></i>
+                  </span>
+                  <input
+                    type="text"
+                    name="nombre"
+                    class="form-control"
+                    placeholder="Ingrese el nombre"
+                    required
+                  />
+                </div>
 
-        <div class="row">
-            <div class="col-md-4">
-                <div class="card shadow">
-                    <div class="card-header bg-primary text-white">Nueva Categoría</div>
-                    <div class="card-body">
-                        <form method="POST">
-                            <input type="text" name="nombre" class="form-control mb-3" placeholder="Ej. Frenos, Motor..." required>
-                            <button type="submit" class="btn btn-success w-100">Crear Categoría</button>
-                        </form>
-                    </div>
-                </div>
+                <button type="submit" class="btn btn-success w-100">
+                  <i class="bi bi-plus-circle"></i>
+                  Crear Categoria
+                </button>
+              </form>
             </div>
-            <div class="col-md-8">
-                <div class="card shadow">
-                    <div class="card-body">
-                        <table class="table">
-                            <thead><tr><th>ID</th><th>Nombre de Categoría</th><th>Acción</th></tr></thead>
-                            <tbody>
-                                {% for c in categorias %}
-                                <tr>
-                                    <td>{{ c.id }}</td><td>{{ c.nombre }}</td>
-                                    <td>
-                                        <form action="{{ url_for('eliminar_categoria', id=c.id) }}" method="POST" onsubmit="return confirm('¿Eliminar categoría?');">
-                                            <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
-                                        </form>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+          </div>
         </div>
+        <div class="col-md-7">
+          <div class="card border-0 shadow-sm">
+            <div class="card-header fw-semibold">
+              <i class="bi bi-tag"></i>
+              Categorias Registradas
+            </div>
+            <div class="card-body">
+              <table class="table table-hover align-middle">
+                <thead class="table-dark">
+                  <tr>
+                    <th class="text-center">ID</th>
+                    <th class="text-center">Nombre de Categoría</th>
+                    <th class="text-center">Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for c in categorias %}
+                  <tr>
+                    <td class="text-center">{{ c.id }}</td>
+                    <td class="text-center">{{ c.nombre }}</td>
+                    <td class="text-center">
+                      <form
+                        action="{{ url_for('eliminar_categoria', id=c.id) }}"
+                        method="POST"
+                        onsubmit="return confirm('¿Eliminar categoría?');"
+                      >
+                        <button
+                          type="submit"
+                          class="btn btn-outline-danger px-3"
+                        >
+                          <i class="bi bi-trash-fill me-1"></i>
+                          Eliminar
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-</body>
+  </body>
 </html>

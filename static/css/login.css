@@ -1,0 +1,74 @@
+/* Fondo principal */
+body {
+  background: linear-gradient(90deg, #133ea1, #1e3a8a);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+/* Tarjeta principal */
+.card {
+  width: 420px;
+  border: none;
+  border-radius: 18px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+/* Título */
+.card h3 {
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+
+/* Subtítulo */
+.subtitulo {
+  color: #6c757d;
+  font-size: 14px;
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+/* Etiquetas */
+label {
+  font-weight: 600;
+  color: #495057;
+}
+
+/* Inputs */
+.form-control {
+  border-radius: 10px;
+  padding: 10px;
+}
+
+/* Iconos */
+.input-group-text {
+  background-color: #f8f9fa;
+  border-radius: 10px 0 0 10px;
+}
+
+/* Botón login */
+.btn-primary {
+  border-radius: 10px;
+  padding: 10px;
+  font-weight: bold;
+  transition: 0.3s;
+}
+
+.btn-primary:hover {
+  box-shadow: 0 0 15px rgba(9, 103, 246, 0.5);
+  transform: scale(1.01);
+}
+
+/* Alertas */
+.alert {
+  border-radius: 10px;
+}
+
+/* Logo */
+.logo {
+  font-size: 55px;
+  color: #0d6efd;
+  text-align: center;
+  margin-bottom: 10px;
+}
