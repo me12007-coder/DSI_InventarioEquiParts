@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Ficha Técnica</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
+  </head>
+  <body class="bg-light">
+    {% include 'includes/navbar.html' %}
+    <div class="container">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h2 class="fw-bold mb-1">
+            <i class="bi bi-box-seam me-2"></i>
+            Ficha del Producto
+          </h2>
+          <p class="text-muted mb-0">Información general y movimientos de inventario.</p>
+        </div>
+        <a href="{{ url_for('inventario.inventario') }}" class="btn btn-secondary">
+          <i class="bi bi-arrow-left me-1"></i> Volver
+        </a>
+      </div>
+      
+      {% with messages = get_flashed_messages(with_categories=true) %} 
+        {% if messages %} 
+          {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">{{ message }}</div>
+          {% endfor %} 
+        {% endif %} 
+      {% endwith %}
+
+      <div class="row">
+        <div class="col-md-7">
+          <div class="card shadow text-dark bg-white mb-4">
+            <div class="card-body row">
+              <div class="col-md-5 text-center mb-3 mb-md-0">
+                {% if p.foto %}
+                <img src="{{ url_for('static', filename='archivos/' ~ p.foto) }}" class="img-fluid rounded border shadow-sm" style="max-height: 230px; object-fit: cover;" />
+                {% else %}
+                <div class="bg-light text-muted border rounded d-flex flex-column align-items-center justify-content-center" style="height: 200px;">
+                  <i class="bi bi-image display-4 mb-2"></i>
+                  <span>Sin fotografía</span>
+                </div>
+                {% endif %}
+              </div>
+              <div class="col-md-7">
+                <span class="badge bg-dark mb-1">SKU: {{ p.sku }}</span>
+                <h3 class="fw-bold text-primary mb-1">{{ p.nombre }}</h3>
+                <p class="text-muted small mb-3"><i class="bi bi-tag"></i> {{ p.categoria_nombre or 'Sin categoría' }}</p>
+                <p class="mb-3">{{ p.descripcion or 'Sin descripción disponible.' }}</p>
+                <div class="row bg-light p-2 rounded g-2 border">
+                  <div class="col-6">
+                    <small class="text-muted d-block">Stock Físico</small>
+                    <span class="fw-bold fs-5 text-dark">{{ p.cantidad }} u.</span>
+                  </div>
+                  <div class="col-6">
+                    <small class="text-muted d-block">Reservas</small>
+                    <span class="fw-bold fs-5 text-warning">{{ p.stock_reservado }} u.</span>
+                  </div>
+                  <div class="col-6 border-top pt-1">
+                    <small class="text-muted d-block">Ubicación</small>
+                    <span class="fw-semibold text-secondary">{{ p.ubicacion or 'No asignada' }}</span>
+                  </div>
+                  <div class="col-6 border-top pt-1">
+                    <small class="text-muted d-block">Precio Venta</small>
+                    <span class="fw-bold fs-5 text-success">${{ "%.2f"|format(p.precio) }}</span>
+                  </div>
+                </div>
+                {% if p.ficha_pdf %}
+                <a href="{{ url_for('static', filename='archivos/' ~ p.ficha_pdf) }}" target="_blank" class="btn btn-outline-danger btn-sm mt-3 w-100">
+                  <i class="bi bi-file-earmark-pdf-fill me-1"></i> Ver Ficha Técnica Oficial (PDF)
+                </a>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          
+          <div class="card shadow">
+            <div class="card-header bg-dark text-white fw-semibold">
+              <i class="bi bi-clock-history me-1"></i> Historial Reciente de Operaciones
+            </div>
+            <div class="card-body p-0 table-responsive">
+              <table class="table table-striped align-middle mb-0" style="font-size: 0.9em;">
+                <thead class="table-secondary">
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Operario</th>
+                    <th>Movimiento</th>
+                    <th class="text-center">Cant.</th>
+                    <th class="text-center">Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for m in movimientos %}
+                  <tr>
+                    <td>{{ m.fecha }}</td>
+                    <td>{{ m.username }}</td>
+                    <td>
+                      {% if m.tipo == 'Entrada' %}
+                      <span class="badge bg-success"><i class="bi bi-box-arrow-in-down me-1"></i>Ingreso</span>
+                      {% elif m.tipo == 'Salida' %}
+                      <span class="badge bg-danger"><i class="bi bi-cart-check me-1"></i>Venta Directa</span>
+                      {% elif m.tipo == 'Cotizacion' %}
+                      <span class="badge bg-warning text-dark"><i class="bi bi-file-earmark-text me-1"></i>Reserva</span>
+                      {% elif m.tipo == 'Venta_Cotizacion' %}
+                      <span class="badge bg-info text-dark"><i class="bi bi-check2-circle me-1"></i>Despacho Reserva</span>
+                      {% else %}
+                      <span class="badge bg-secondary">{{ m.tipo }}</span>
+                      {% endif %}
+                    </td>
+                    <td class="text-center fw-bold">{{ m.cantidad }}</td>
+                    <td class="text-center">
+                      <a href="{{ url_for('inventario.comprobante', mov_id=m.id) }}" target="_blank" class="btn btn-sm btn-outline-secondary py-0">
+                        <i class="bi bi-printer"></i>
+                      </a>
+                    </td>
+                  </tr>
+                  {% else %}
+                  <tr>
+                    <td colspan="5" class="text-center py-3 text-muted">Este repuesto no registra movimientos aún.</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-5">
+          <div class="card shadow">
+            <div class="card-header bg-success text-white fw-semibold">
+              <i class="bi bi-arrow-left-right me-2"></i> Módulo de Transacciones
+            </div>
+            <div class="card-body">
+              <form action="{{ url_for('inventario.detalle_producto', id=p.id) }}" method="POST">
+                <label class="form-label fw-semibold"><i class="bi bi-gear-wide-connected"></i> Tipo de Operación</label>
+                <div class="mb-3">
+                  <select name="tipo_movimiento" class="form-select" required>
+                    <option value="Salida">Venta Directa (Factura/Ticket)</option>
+                    <option value="Cotizacion">Crear Reserva (Cotización Temporaria)</option>
+                    <option value="Venta_Cotizacion">Procesar/Despachar Reserva Activa</option>
+                    {% if session['rol'] in ['Administrador', 'Bodeguero'] %}
+                    <option value="Entrada">Ingreso a Bodega (Abastecimiento)</option>
+                    {% endif %}
+                  </select>
+                </div>
+                <div class="card bg-light border mb-3">
+                  <div class="card-body py-2 px-3 small text-muted">
+                    <div class="mb-2"><i class="bi bi-file-earmark-text text-warning me-2"></i><strong>Crear Reserva:</strong> Congela stock temporalmente para la venta.</div>
+                    <div class="mb-2"><i class="bi bi-cart-check text-success me-2"></i><strong>Venta Directa:</strong> Descuenta inventario sin cotizar.</div>
+                    <div><i class="bi bi-box-arrow-in-down text-dark me-2"></i><strong>Ingreso a Bodega:</strong> Aumenta existencias del producto.</div>
+                  </div>
+                </div>
+                <label class="form-label fw-semibold"><i class="bi bi-handbag"></i> Cantidad</label>
+                <div class="input-group mb-3">
+                  <span class="input-group-text"><i class="bi bi-boxes"></i></span>
+                  <input type="number" name="cantidad" class="form-control" placeholder="Cantidad de piezas" min="1" required/>
+                </div>
+                <button type="submit" class="btn btn-success w-100">
+                  <i class="bi bi-check-circle me-2"></i> Procesar Transacción
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

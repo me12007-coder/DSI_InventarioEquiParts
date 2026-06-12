@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Editar {{ p.sku }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
+</head>
+<body class="bg-light">
+    {% include 'includes/navbar.html' %}
+    <div class="container mt-5 mb-5">
+        <div class="card shadow mx-auto" style="max-width: 700px;">
+            <div class="card-header bg-warning text-dark fw-semibold">
+                <i class="bi bi-pencil-square me-2"></i>
+                Editar Producto 
+            </div>
+            <div class="card-body">
+                <div class="mb-4">
+                    <h4 class="fw-bold mb-1">{{ p.nombre }}</h4>
+                    <span class="badge bg-secondary">
+                        SKU: {{ p.sku }}
+                    </span>
+                    <p class="text-muted mt-2 mb-0">
+                        Actualice la información general del producto registrado en el inventario.
+                    </p>
+                </div>
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            Nombre del Repuesto
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="bi bi-box-seam"></i>
+                            </span>
+                            <input type="text" name="nombre" class="form-control" value="{{ p.nombre }}" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Descripción / Especificaciones</label>
+                        <textarea name="descripcion" class="form-control" rows="3">{{ p.descripcion }}</textarea>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Stock Físico</label>
+                            <input type="number" name="cantidad" class="form-control" value="{{ p.cantidad }}" min="0" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Precio Unitario ($)</label>
+                            <input type="number" name="precio" class="form-control" value="{{ p.precio }}" step="0.01" min="0.01" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Ubicación en Bodega</label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="bi bi-geo-alt"></i>
+                            </span>
+                            <input type="text" name="ubicacion" class="form-control" value="{{ p.ubicacion }}">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Categoría</label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="bi bi-tags"></i>
+                            </span>
+                            <select name="categoria_id" class="form-select">
+                                <option value="">Sin categoría</option>
+                                    {% for c in categorias %}
+                                    <option value="{{ c.id }}" {% if p.categoria_id == c.id %}selected{% endif %}>{{ c.nombre }}</option>
+                                    {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a href="{{ url_for('inventario.inventario') }}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-circle me-1"></i>
+                            Guardar Cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

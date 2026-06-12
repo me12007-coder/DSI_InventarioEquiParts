@@ -1,0 +1,29 @@
+.rol-admin,
+.rol-bodega,
+.rol-vendedor {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.rol-admin {
+  background: #212529;
+  color: white;
+}
+
+.rol-bodega {
+  background: #0d6efd;
+  color: white;
+}
+
+.rol-vendedor {
+  background: #198754;
+  color: white;
+}
+
+.btn-secondary {
+  background-color: #555555;
+}
