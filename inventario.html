@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Inventario - Equi-Parts S&S</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/inventario.css') }}"
+    />
+  </head>
+  <body class="bg-light">
+    {% include 'includes/navbar.html' %}
+    <div class="container-fluid px-4">
+      {% with messages = get_flashed_messages(with_categories=true) %} {% if
+      messages %} {% for category, message in messages %}
+      <div class="alert alert-{{ category }} alert-dismissible fade show">
+        {{ message }}
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="alert"
+        ></button>
+      </div>
+      {% endfor %} {% endif %} {% endwith %}
+
+      <div class="row">
+        {% if session['rol'] in ['Administrador', 'Bodeguero'] %}
+        <div class="col-md-3">
+          <div class="card shadow mb-4">
+            <div class="card-header bg-primary text-white">
+              <i class="bi bi-plus-circle me-2"></i>
+              Nuevo Producto
+            </div>
+            <div class="card-body">
+              <form method="POST" enctype="multipart/form-data">
+                <h6 class="seccion-formulario">Información General</h6>
+                <div class="input-group mb-2">
+                  <span class="input-group-text">
+                    <i class="bi bi-upc-scan"></i>
+                  </span>
+                  <input
+                    type="text"
+                    name="sku"
+                    class="form-control"
+                    placeholder="SKU"
+                    required
+                  />
+                </div>
+                <div class="input-group mb-2">
+                  <span class="input-group-text">
+                    <i class="bi bi-box-seam"></i>
+                  </span>
+                  <input
+                    type="text"
+                    name="nombre"
+                    class="form-control"
+                    placeholder="Nombre"
+                    required
+                  />
+                </div>
+                <div class="input-group mb-2">
+                  <span class="input-group-text">
+                    <i class="bi bi-tags"></i>
+                  </span>
+                  <select name="categoria_id" class="form-select">
+                    <option value="">Sin categoría</option>
+                    {% for c in categorias %}
+                    <option value="{{ c.id }}">{{ c.nombre }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <h6 class="seccion-formulario">Inventario</h6>
+                
+                <div class="row">
+                  <div class="col-6 mb-2">
+                    <label class="form-label small fw-bold">Cant. Inicial</label>
+                    <input type="number" name="cantidad" class="form-control form-control-sm" min="0" value="0" required />
+                  </div>
+                  <div class="col-6 mb-2">
+                    <label class="form-label small fw-bold">Alerta Stock Mín.</label>
+                    <input type="number" name="stock_minimo" class="form-control form-control-sm" min="1" value="5" required />
+                  </div>
+                </div>
+
+                <div class="input-group mb-2">
+                  <span class="input-group-text">
+                    <i class="bi bi-currency-dollar"></i>
+                  </span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="precio"
+                    class="form-control"
+                    placeholder="Precio"
+                    required
+                  />
+                </div>
+                <div class="input-group mb-2">
+                  <span class="input-group-text">
+                    <i class="bi bi-geo-alt"></i>
+                  </span>
+                  <input
+                    type="text"
+                    name="ubicacion"
+                    class="form-control"
+                    placeholder="Ubicación"
+                  />
+                </div>
+
+                <h6 class="seccion-formulario">Archivos Adjuntos</h6>
+                <label class="form-label fw-semibold">
+                  <i class="bi bi-image me-1"></i>
+                  Fotografía
+                </label>
+                <input
+                  type="file"
+                  name="foto"
+                  class="form-control mb-2"
+                  accept="image/*"
+                />
+                <label class="form-label fw-semibold">
+                  <i class="bi bi-file-earmark-pdf me-1"></i>
+                  Ficha Técnica PDF
+                </label>
+                <input
+                  type="file"
+                  name="pdf"
+                  class="form-control mb-3"
+                  accept=".pdf"
+                />
+                <button type="submit" class="btn btn-success w-100">
+                  <i class="bi bi-plus-circle me-1"></i>
+                  Crear Producto
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <div class="card shadow mb-4">
+            <div class="card-header bg-warning text-dark">
+              <i class="bi bi-file-earmark-arrow-up me-2"></i>
+              Importar Inventario CSV
+            </div>
+            <div class="card-body">
+              <form
+                action="{{ url_for('inventario.importar_csv') }}"
+                method="POST"
+                enctype="multipart/form-data"
+              >
+                <input
+                  class="form-control mb-2"
+                  type="file"
+                  name="archivo_csv"
+                  accept=".csv"
+                  required
+                />
+                <button type="submit" class="btn btn-dark w-100">
+                  <i class="bi bi-upload me-1"></i>
+                  Cargar Masivamente
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        <div
+          class="col-md-{% if session['rol'] == 'Vendedor' %}12{% else %}9{% endif %}"
+        >
+          <!-- Barra de Filtros Dinámicos -->
+          <div class="row mb-3 align-items-center bg-white p-3 rounded shadow-sm mx-0">
+              <div class="col-md-4 mb-2 mb-md-0">
+                  <label class="form-label small fw-bold text-muted mb-1">Búsqueda (Marca, Nombre, SKU)</label>
+                  <input type="text" id="filtroBuscar" class="form-control" placeholder="Ej. Toyota, Filtro de aceite...">
+              </div>
+              <div class="col-md-4 mb-2 mb-md-0">
+                  <label class="form-label small fw-bold text-muted mb-1">Filtrar por Categoría</label>
+                  <select id="filtroCategoria" class="form-select">
+                      <option value="">Todas las Categorías</option>
+                      {% for c in categorias %}
+                      <option value="{{ c.id }}">{{ c.nombre }}</option>
+                      {% endfor %}
+                  </select>
+              </div>
+              <div class="col-md-2 mt-auto mb-2 mb-md-0">
+                  <button id="btnLimpiar" class="btn btn-secondary w-100">
+                      <i class="bi bi-eraser-fill me-1"></i> Limpiar
+                  </button>
+              </div>
+              <div class="col-md-2 mt-auto mb-2 mb-md-0 text-end">
+                  <div class="badge bg-primary text-white p-2 fs-6 w-100">
+                      Mostrando: <span id="totalProductos">{{ productos|length }}</span>
+                  </div>
+              </div>
+          </div>  
+          
+          <div class="card shadow">
+            <div class="card-body p-0">
+              <table class="table table-striped align-middle mb-0">
+                <thead class="table-dark text-center">
+                  <tr>
+                    <th>SKU / Producto</th>
+                    <th>Archivos</th>
+                    <th>Stock Disponible</th>
+                    <th>Precio</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for p in productos %}
+                  <tr>
+                    <td><strong>{{ p.sku }}</strong><br />{{ p.nombre }}</td>
+                    <td class="text-center">
+                      {% if p.foto %}
+                        <i class="bi bi-image me-1"></i>
+                      {% endif %}
+
+                      {% if p.ficha_pdf %}
+                        <i class="bi bi-file-earmark-pdf-fill"></i>
+                      {% endif %}
+                    </td>
+                    <td class="text-center align-middle">
+                      <div class="stock-box">
+                        <div class="stock-disponible">
+                          {{ p.cantidad - p.stock_reservado }}
+                        </div>
+                        <small class="text-muted">
+                          Disponible
+                        </small>
+                        <div class="stock-detalle">
+                          Físico: {{ p.cantidad }} |
+                          Reservado: {{ p.stock_reservado }}
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      $ {{ p.precio }} 
+                    </td>
+                    <td>
+                      <a
+                        href="{{ url_for('inventario.detalle_producto', id=p.id) }}"
+                        class="btn btn-primary btn-sm"
+                        ><i class="bi bi-eye-fill me-1"></i> 
+                        Ver Ficha
+                      </a
+                      >
+
+                      {% if session['rol'] in ['Administrador', 'Bodeguero'] %}
+                      <a
+                        href="{{ url_for('inventario.editar_producto', id=p.id) }}"
+                        class="btn btn-warning btn-sm"
+                        ><i class="bi bi-pencil-fill me-1"></i>Editar</a
+                      >
+                      <form
+                        action="{{ url_for('inventario.eliminar_producto', id=p.id) }}"
+                        method="POST"
+                        class="d-inline"
+                        onsubmit="
+                          return confirm('¿Eliminar producto y su historial?');
+                        "
+                      >
+                        <button type="submit" class="btn btn-danger btn-sm">
+                          <i class="bi bi-trash-fill me-1"></i> Eliminar
+                        </button>
+                      </form>
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% else %}
+                  <tr>
+                    <td colspan="5" class="text-center py-4">
+                      No se encontraron productos en el inventario.
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- SCRIPTS UNIFICADOS: Alertas y Filtros Dinámicos -->
+    <script>
+      document.addEventListener("DOMContentLoaded", function() {
+        
+        // --- 1. LÓGICA DE ALERTAS DE STOCK (SWEETALERT) ---
+        let alertas = {{ alertas_stock | tojson | safe }};
+        if (alertas && alertas.length > 0) {
+            let mensajeHTML = '<ul style="text-align: left; font-size: 14px;">';
+            alertas.forEach(function(item) {
+                mensajeHTML += `<li><strong>${item.nombre}</strong>: Quedan ${item.stock} (Mínimo: ${item.minimo})</li>`;
+            });
+            mensajeHTML += '</ul>';
+
+            Swal.fire({
+                title: '¡Atención! Stock Crítico',
+                html: 'Los siguientes repuestos están por agotarse:<br><br>' + mensajeHTML,
+                icon: 'warning',
+                confirmButtonText: 'Entendido',
+                confirmButtonColor: '#d33',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 6000,
+                timerProgressBar: true
+            });
+        }
+
+        // --- 2. LÓGICA DE FILTRADO DINÁMICO (HU-11) ---
+        const filtroBuscar = document.getElementById('filtroBuscar');
+        const filtroCategoria = document.getElementById('filtroCategoria');
+        const btnLimpiar = document.getElementById('btnLimpiar');
+        const tbodyProductos = document.querySelector('table tbody');
+        const spanTotal = document.getElementById('totalProductos');
+
+        const userRol = "{{ session.get('rol') }}";
+        const isAdminOrBodeguero = ['Administrador', 'Bodeguero'].includes(userRol);
+
+        function aplicarFiltros() {
+            const params = new URLSearchParams({
+                q: filtroBuscar.value,
+                categoria_id: filtroCategoria.value
+            });
+
+            fetch(`/api/productos/filtrar?${params.toString()}`)
+                .then(res => {
+                    if (!res.ok) {
+                        throw new Error(`Error en la petición: ${res.status}`);
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    spanTotal.textContent = data.total;
+                    tbodyProductos.innerHTML = ''; 
+
+                    if (data.total === 0) {
+                        tbodyProductos.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">No se encontraron productos con estos filtros.</td></tr>`;
+                        return;
+                    }
+
+                    data.productos.forEach(p => {
+                        const stock_disponible = p.cantidad - p.stock_reservado;
+                        
+                        let iconosArchivos = '';
+                        if(p.foto) iconosArchivos += '<i class="bi bi-image me-1 text-primary"></i>';
+                        if(p.ficha_pdf) iconosArchivos += '<i class="bi bi-file-earmark-pdf-fill text-danger"></i>';
+
+                        let botonesAccion = `<a href="/producto/${p.id}" class="btn btn-primary btn-sm"><i class="bi bi-eye-fill me-1"></i>Ver Ficha</a> `;
+                        
+                        if (isAdminOrBodeguero) {
+                            botonesAccion += `
+                                <a href="/editar_producto/${p.id}" class="btn btn-warning btn-sm"><i class="bi bi-pencil-fill me-1"></i>Editar</a>
+                                <form action="/eliminar_producto/${p.id}" method="POST" class="d-inline" onsubmit="return confirm('¿Eliminar producto y su historial?');">
+                                    <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-trash-fill me-1"></i>Eliminar</button>
+                                </form>
+                            `;
+                        }
+
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td><strong>${p.sku}</strong><br />${p.nombre}</td>
+                            <td class="text-center">${iconosArchivos}</td>
+                            <td class="text-center align-middle">
+                                <div class="stock-box">
+                                    <div class="stock-disponible ${stock_disponible <= 0 ? 'text-danger fw-bold' : ''}">${stock_disponible}</div>
+                                    <small class="text-muted">Disponible</small>
+                                    <div class="stock-detalle">Físico: ${p.cantidad} | Reservado: ${p.stock_reservado}</div>
+                                </div>
+                            </td>
+                            <td>$ ${parseFloat(p.precio).toFixed(2)}</td>
+                            <td>${botonesAccion}</td>
+                        `;
+                        tbodyProductos.appendChild(tr);
+                    });
+                })
+                .catch(error => {
+                    console.error("Error filtrando inventario:", error);
+                    // Opcional: mostrar un mensaje al usuario si falla la conexión
+                    // Swal.fire('Error', 'No se pudo conectar con el servidor para filtrar', 'error');
+                });
+        }
+
+        filtroBuscar.addEventListener('input', aplicarFiltros);
+        filtroCategoria.addEventListener('change', aplicarFiltros);
+        
+        btnLimpiar.addEventListener('click', () => {
+            filtroBuscar.value = '';
+            filtroCategoria.value = '';
+            aplicarFiltros();
+        });
+
+      });
+    </script>
+  </body>
+</html>
