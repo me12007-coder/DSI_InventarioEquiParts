@@ -17,48 +17,77 @@
     />
   </head>
   <body class="bg-light">
-    {% include 'includes/navbar.html' %} 
-    
+    {% include 'includes/navbar.html' %}
+
     <div class="container">
-      {% with messages = get_flashed_messages(with_categories=true) %} 
-        {% if messages %} 
-          {% for category, message in messages %}
-            <div class="alert alert-{{ category }}">{{ message }}</div>
-          {% endfor %} 
-        {% endif %} 
-      {% endwith %}
+      <div class="mb-4">
+        <a
+          href="{{ url_for('inventario.inventario') }}"
+          class="btn btn-outline-secondary px-4 py-2 fw-semibold"
+        >
+          <i class="bi bi-arrow-left me-2"></i>
+          Volver
+        </a>
+      </div>
+      {% with messages = get_flashed_messages(with_categories=true) %} {% if
+      messages %} {% for category, message in messages %}
+      <div class="alert alert-{{ category }}">{{ message }}</div>
+      {% endfor %} {% endif %} {% endwith %}
 
       <div class="row g-4">
         <div class="col-md-4">
-          <div class="card shadow ms-4">
-            <div class="card-header bg-primary text-white">
+          <div class="card shadow-sm">
+            <div class="card-header bg-success text-white fw-bold py-3">
               <i class="bi bi-tags me-2"></i>
               Nueva Categoría
             </div>
-            <div class="card-body">
-              <p class="text-muted small mb-3">
-                Registre nuevas categorías para organizar los repuestos del
-                inventario.
+            <div class="card-body p-4">
+              <p class="text-muted small mb-4">
+                Registre una categoría para organizar sus repuestos.
               </p>
-              <form action="{{ url_for('inventario.categorias') }}" method="POST">
+              <form
+                action="{{ url_for('inventario.categorias') }}"
+                method="POST"
+              >
                 <div class="mb-3">
-                  <label class="form-label fw-semibold">Nombre de Categoría</label>
-                  <input type="text" name="nombre" class="form-control" placeholder="Ej: Motor, Frenos..." required />
+                  <label class="form-label fw-semibold"
+                    >Nombre de Categoría</label
+                  >
+                  <div class="input-group">
+                    <span class="input-group-text bg-light">
+                      <i class="bi bi-tag text-muted"></i>
+                    </span>
+                    <input
+                      type="text"
+                      id="nombre"
+                      name="nombre"
+                      class="form-control"
+                      placeholder="Ej. Motor, Frenos..."
+                      required
+                    />
+                  </div>
                 </div>
-                <button type="submit" class="btn btn-primary w-100">
-                  <i class="bi bi-plus-circle me-1"></i> Guardar Categoría
+                <button type="submit" class="btn btn-success w-100">
+                  <i class="bi bi-plus-circle me-1"></i> Guardar
                 </button>
               </form>
             </div>
           </div>
         </div>
         <div class="col-md-8">
-          <div class="card shadow me-4">
-            <div class="card-header bg-dark text-white">
-              <i class="bi bi-list-ul me-2"></i>
-              Categorías Registradas
+          <div class="card shadow-sm border-0">
+            <div class="card-header fw-semibold py-3 px-4">
+              <div class="d-flex align-items-center justify-content-between">
+                <div>
+                  <i class="bi bi-list-ul me-2"></i>
+                  Categorías Registradas
+                </div>
+                <span class="badge bg-light text-dark border">
+                  {{ categorias|length }}
+                </span>
+              </div>
             </div>
-            <div class="card-body">
+            <div class="card-body p-4">
               <table class="table table-hover align-middle">
                 <thead class="table-dark">
                   <tr>

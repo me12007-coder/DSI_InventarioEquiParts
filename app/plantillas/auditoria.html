@@ -1,74 +1,97 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
     <title>Log de Auditoría - Equi-Parts S&S</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
-    <nav class="navbar navbar-dark bg-dark mb-4 p-2">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="{{ url_for('inventario.inventario') }}">← Volver al Inventario</a>
-            <span class="text-white">Log de Auditoría (Admin: {{ username }})</span>
-        </div>
-    </nav>
-
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="bg-light">
+    {% include 'includes/navbar.html' %}
     <div class="container-fluid px-4">
-        <div class="card shadow">
-            <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
-                <div>
-                    <h5 class="mb-0">Registro Global de Movimientos</h5>
-                    <small>Auditoría de inventario</small>
-                </div>
-                <a href="{{ url_for('reportes.exportar_auditoria') }}" class="btn btn-primary btn-sm fw-bold border border-light">📥 Exportar a CSV</a>
-            </div>
-            <div class="card-body p-0">
-                <table class="table table-striped table-hover align-middle mb-0" style="font-size: 0.9em;">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>ID Transacción</th>
-                            <th>Fecha y Hora</th>
-                            <th>Operario</th>
-                            <th>Tipo de Operación</th>
-                            <th>Repuesto afectado</th>
-                            <th class="fw-bold">Cantidad</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for log in logs %}
-                        <tr>
-                            <td>#{{ log.transaccion_id }}</td>
-                            <td>{{ log.fecha }}</td>
-                            <td><span class="badge bg-secondary">{{ log.username }}</span></td>
-                            <td class="text-center">
-                                {% if log.tipo == 'Entrada' %}
-                                    <span class="text-primary fw-bold">📥 Ingreso Bodega</span>
-                                {% elif log.tipo == 'Masivo' or 'CSV' in log.tipo %}
-                                    <span class="text-info fw-bold">📑 Importación Masiva</span>
-                                {% elif log.tipo == 'Cotizacion' %}
-                                    <span class="text-warning fw-bold text-dark">📋 Reserva (Cotización)</span>
-                                {% elif log.tipo == 'Venta_Cotizacion' %}
-                                    <span class="text-success fw-bold">✅ Venta desde Reserva</span>
-                                {% elif log.tipo == 'Salida' %}
-                                    <span class="text-danger fw-bold">🛒 Salida Directa</span>
-                                {% elif log.tipo == 'Eliminación de Producto' %}
-                                    <span class="text-danger fw-bold">🗑️ Eliminación de Sistema</span>
-                                {% else %}
-                                    {{ log.tipo }}
-                                {% endif %}
-                            </td>
-                            <td>{{ log.sku }} - {{ log.nombre }}</td>
-                            <td class="fw-bold">{{ log.cantidad }}</td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="6" class="text-center py-4">No hay movimientos registrados en el sistema aún.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+      <div class="mb-4">
+        <a
+          href="{{ url_for('inventario.inventario') }}"
+          class="btn btn-outline-secondary px-4 py-2 fw-semibold"
+        >
+          <i class="bi bi-arrow-left me-2"></i>
+          Volver
+        </a>
+      </div>
+      <div class="card shadow">
+        <div
+          class="card-header bg-danger text-white d-flex justify-content-between align-items-center"
+        >
+          <div>
+            <h5 class="mb-0">Registro Global de Movimientos</h5>
+            <small>Auditoría de inventario</small>
+          </div>
+          <a
+            href="{{ url_for('reportes.exportar_auditoria') }}"
+            class="btn btn-primary btn-sm fw-bold border border-light"
+            >📥 Exportar a CSV</a
+          >
         </div>
+        <div class="card-body p-0">
+          <table
+            class="table table-striped table-hover align-middle mb-0"
+            style="font-size: 0.9em"
+          >
+            <thead class="table-dark">
+              <tr>
+                <th>ID Transacción</th>
+                <th>Fecha y Hora</th>
+                <th>Operario</th>
+                <th>Tipo de Operación</th>
+                <th>Repuesto afectado</th>
+                <th class="fw-bold">Cantidad</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for log in logs %}
+              <tr>
+                <td>#{{ log.transaccion_id }}</td>
+                <td>{{ log.fecha }}</td>
+                <td>
+                  <span class="badge bg-secondary">{{ log.username }}</span>
+                </td>
+                <td class="text-center">
+                  {% if log.tipo == 'Entrada' %}
+                  <span class="text-primary fw-bold">📥 Ingreso Bodega</span>
+                  {% elif log.tipo == 'Masivo' or 'CSV' in log.tipo %}
+                  <span class="text-info fw-bold">📑 Importación Masiva</span>
+                  {% elif log.tipo == 'Cotizacion' %}
+                  <span class="text-warning fw-bold text-dark"
+                    >📋 Reserva (Cotización)</span
+                  >
+                  {% elif log.tipo == 'Venta_Cotizacion' %}
+                  <span class="text-success fw-bold"
+                    >✅ Venta desde Reserva</span
+                  >
+                  {% elif log.tipo == 'Salida' %}
+                  <span class="text-danger fw-bold">🛒 Salida Directa</span>
+                  {% elif log.tipo == 'Eliminación de Producto' %}
+                  <span class="text-danger fw-bold"
+                    >🗑️ Eliminación de Sistema</span
+                  >
+                  {% else %} {{ log.tipo }} {% endif %}
+                </td>
+                <td>{{ log.sku }} - {{ log.nombre }}</td>
+                <td class="fw-bold">{{ log.cantidad }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="6" class="text-center py-4">
+                  No hay movimientos registrados en el sistema aún.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
-</body>
+  </body>
 </html>
