@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Detalle de Movimiento - Equi-Parts</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    
+    <style>
+        /* Al imprimir, escondemos los botones y dejamos solo el "ticket" */
+        @media print {
+            .no-print { display: none !important; }
+            body { background-color: white !important; }
+            .card { border: none !important; box-shadow: none !important; }
+        }
+    </style>
+</head>
+<body class="bg-secondary d-flex justify-content-center align-items-center vh-100">
+    
+    <div class="card shadow-lg p-4" style="max-width: 500px; width: 100%;">
+        <div class="text-center mb-4 border-bottom pb-3">
+            <h2 class="fw-bold"><i class="bi bi-receipt text-primary me-2"></i>Equi-Parts S&S</h2>
+            <h5 class="text-muted mb-0">Detalle de Operación #{{ m.id }}</h5>
+        </div>
+
+        <ul class="list-group list-group-flush mb-4">
+            <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                <span class="text-muted"><i class="bi bi-upc-scan me-2"></i>Código (SKU):</span>
+                <span class="fw-bold text-dark">{{ m.sku }}</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                <span class="text-muted"><i class="bi bi-gear me-2"></i>Repuesto:</span>
+                <span class="fw-bold text-dark text-end ms-3">{{ m.repuesto }}</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                <span class="text-muted"><i class="bi bi-arrow-left-right me-2"></i>Tipo de Movimiento:</span>
+                <span class="fw-bold text-primary">{{ m.tipo }}</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center py-3 bg-light">
+                <span class="text-muted fw-semibold"><i class="bi bi-boxes me-2"></i>Cantidad Movida:</span>
+                <span class="fw-bold fs-4 text-dark">{{ m.cantidad }} u.</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                <span class="text-muted"><i class="bi bi-calendar-event me-2"></i>Fecha y Hora:</span>
+                <span class="fw-semibold text-secondary">{{ m.fecha }}</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                <span class="text-muted"><i class="bi bi-person-badge me-2"></i>Responsable:</span>
+                <span class="fw-bold text-dark">{{ m.responsable }}</span>
+            </li>
+        </ul>
+
+        <div class="d-flex gap-2 no-print">
+            <button onclick="window.print()" class="btn btn-primary w-100 fw-bold py-2">
+                <i class="bi bi-printer-fill me-2"></i> Imprimir
+            </button>
+            <button onclick="window.close()" class="btn btn-outline-secondary w-100 fw-bold py-2">
+                <i class="bi bi-x-circle me-2"></i> Cerrar Pestaña
+            </button>
+        </div>
+    </div>
+
+</body>
+</html>

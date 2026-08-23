@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Ficha Técnica</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
+    <style>
+      @media print {
+        body { background-color: white !important; }
+        /* Oculta menú, botón volver, panel derecho de transacciones y la columna de acciones en la tabla */
+        .navbar, .btn, .col-md-5, .esconder-impresion { display: none !important; }
+        /* Expande el panel izquierdo para que ocupe todo el ancho de la hoja */
+        .col-md-7 { width: 100% !important; max-width: 100% !important; flex: 0 0 100% !important; }
+        .card { border: none !important; box-shadow: none !important; }
+        .table { color: black !important; }
+      }
+    </style>
+  </head>
+  <body class="bg-light">
+    {% include 'includes/navbar.html' %}
+    <div class="container">
+      <div class="d-flex justify-content-between align-items-center mb-4 esconder-impresion">
+        <div>
+          <h2 class="fw-bold mb-1">
+            <i class="bi bi-box-seam me-2"></i>
+            Ficha del Producto
+          </h2>
+          <p class="text-muted mb-0">Información general y movimientos de inventario.</p>
+        </div>
+        <a href="{{ url_for('inventario.inventario') }}" class="btn btn-secondary">
+          <i class="bi bi-arrow-left me-1"></i> Volver
+        </a>
+      </div>
+      
+      {% with messages = get_flashed_messages(with_categories=true) %} 
+        {% if messages %} 
+          {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">{{ message }}</div>
+          {% endfor %} 
+        {% endif %} 
+      {% endwith %}
+
+      <div class="row">
+        <div class="col-md-7">
+          <div class="card shadow text-dark bg-white mb-4">
+            <div class="card-body row">
+              <div class="col-md-5 text-center mb-3 mb-md-0">
+                {% if p.foto %}
+                <img src="{{ url_for('static', filename='archivos/' ~ p.foto) }}" class="img-fluid rounded border shadow-sm" style="max-height: 230px; object-fit: cover;" />
+                {% else %}
+                <div class="bg-light text-muted border rounded d-flex flex-column align-items-center justify-content-center" style="height: 200px;">
+                  <i class="bi bi-image display-4 mb-2"></i>
+                  <span>Sin fotografía</span>
+                </div>
+                {% endif %}
+              </div>
+              <div class="col-md-7">
+                <span class="badge bg-dark mb-1">SKU: {{ p.sku }}</span>
+                <h3 class="fw-bold text-primary mb-1">{{ p.nombre }}</h3>
+                <p class="text-muted small mb-3"><i class="bi bi-tag"></i> {{ p.categoria_nombre or 'Sin categoría' }}</p>
+                <p class="mb-3">{{ p.descripcion or 'Sin descripción disponible.' }}</p>
+                <div class="row bg-light p-2 rounded g-2 border">
+                  <div class="col-6">
+                    <small class="text-muted d-block">Stock Físico</small>
+                    <span class="fw-bold fs-5 text-dark">{{ p.cantidad }} u.</span>
+                  </div>
+                  <div class="col-6">
+                    <small class="text-muted d-block">Reservas</small>
+                    <span class="fw-bold fs-5 text-warning">{{ p.stock_reservado }} u.</span>
+                  </div>
+                  <div class="col-6 border-top pt-1">
+                    <small class="text-muted d-block">Ubicación</small>
+                    <span class="fw-semibold text-secondary">{{ p.ubicacion or 'No asignada' }}</span>
+                  </div>
+                  <div class="col-6 border-top pt-1">
+                    <small class="text-muted d-block">Precio Venta</small>
+                    <span class="fw-bold fs-5 text-success">${{ "%.2f"|format(p.precio) }}</span>
+                  </div>
+                </div>
+                {% if p.ficha_pdf %}
+                <a href="{{ url_for('static', filename='archivos/' ~ p.ficha_pdf) }}" target="_blank" class="btn btn-outline-danger btn-sm mt-3 w-100 esconder-impresion">
+                  <i class="bi bi-file-earmark-pdf-fill me-1"></i> Ver Ficha Técnica Oficial (PDF)
+                </a>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          
+          <div class="card shadow mt-4">
+            <div class="card-header bg-dark text-white fw-semibold d-flex justify-content-between align-items-center">
+              <div><i class="bi bi-clock-history me-1"></i> Trazabilidad Completa de Operaciones</div>
+              
+              <!-- Botones de Exportación (se ocultan al imprimir gracias a la clase 'esconder-impresion' de btn) -->
+              <div class="d-flex gap-2">
+                <a href="{{ url_for('inventario.exportar_trazabilidad_csv', id=p.id) }}" class="btn btn-success btn-sm fw-bold esconder-impresion">
+                  <i class="bi bi-file-earmark-excel-fill"></i> CSV
+                </a>
+                <button onclick="window.print()" class="btn btn-danger btn-sm fw-bold esconder-impresion">
+                  <i class="bi bi-printer-fill"></i> PDF
+                </button>
+              </div>
+            </div>
+            <div class="card-body p-0 table-responsive">
+              <table class="table table-striped align-middle mb-0" style="font-size: 0.9em;">
+                <thead class="table-secondary">
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Operario</th>
+                    <th>Movimiento</th>
+                    <th class="text-center">Cant.</th>
+                    <th class="text-center esconder-impresion">Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for m in movimientos %}
+                  <tr>
+                    <td>{{ m.fecha }}</td>
+                    <td>{{ m.username }}</td>
+                    <td>
+                      {% if m.tipo == 'Entrada' %}
+                      <span class="badge bg-success"><i class="bi bi-box-arrow-in-down me-1"></i>Ingreso</span>
+                      {% elif m.tipo == 'Salida' %}
+                      <span class="badge bg-danger"><i class="bi bi-cart-check me-1"></i>Venta Directa</span>
+                      {% elif m.tipo == 'Cotizacion' %}
+                      <span class="badge bg-warning text-dark"><i class="bi bi-file-earmark-text me-1"></i>Reserva</span>
+                      {% elif m.tipo == 'Venta_Cotizacion' %}
+                      <span class="badge bg-info text-dark"><i class="bi bi-check2-circle me-1"></i>Despacho Reserva</span>
+                      {% else %}
+                      <span class="badge bg-secondary">{{ m.tipo }}</span>
+                      {% endif %}
+                    </td>
+                    <td class="text-center fw-bold">{{ m.cantidad }}</td>
+                    <td class="text-center esconder-impresion">
+                      <a href="{{ url_for('inventario.comprobante', mov_id=m.id) }}" target="_blank" class="btn btn-sm btn-outline-secondary py-0">
+                        <i class="bi bi-printer"></i>
+                      </a>
+                    </td>
+                  </tr>
+                  {% else %}
+                  <tr>
+                    <td colspan="5" class="text-center py-3 text-muted">Este repuesto no registra movimientos aún.</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-5">
+          <div class="card shadow">
+            <div class="card-header bg-success text-white fw-semibold">
+              <i class="bi bi-arrow-left-right me-2"></i> Módulo de Transacciones
+            </div>
+            <div class="card-body">
+            <form id="formTransaccion" action="{{ url_for('inventario.detalle_producto', id=p.id) }}" method="POST">                
+                <label class="form-label fw-semibold"><i class="bi bi-gear-wide-connected"></i> Tipo de Operación</label>
+                <div class="mb-3">
+                  <select name="tipo_movimiento" id="tipoMovimiento" class="form-select" required>
+                    <option value="Salida">Venta Directa (Factura/Ticket)</option>
+                    <option value="Cotizacion">Crear Reserva (Cotización Temporaria)</option>
+                    <option value="Venta_Cotizacion">Procesar/Despachar Reserva Activa</option>
+                    {% if session['rol'] in ['Administrador', 'Bodeguero'] %}
+                    <option value="Entrada">Ingreso a Bodega (Abastecimiento)</option>
+                    {% endif %}
+                    {% if session['rol'] == 'Administrador' %}
+                    <option value="Ajuste" class="bg-danger text-white">Ajuste manual (Conciliación/Pérdida)</option>
+                    <!-- Nueva opción de devolución -->
+                    <option value="Devolucion" class="bg-secondary text-white">Devolución de Cliente</option>
+                    {% endif %}
+                  </select> 
+                </div>
+
+                <!-- Campo Justificación (Oculto por defecto) -->
+                <div id="cajaJustificacion" class="mb-3" style="display: none;">
+                  <label class="form-label fw-semibold text-danger"><i class="bi bi-exclamation-triangle"></i> Justificación del Ajuste</label>
+                  <textarea name="justificacion" id="inputJustificacion" class="form-control" rows="2" placeholder="Ej. Pérdida, robo, conteo físico erróneo..."></textarea>
+                  <small class="text-muted">Obligatorio para ajustes de inventario.</small>
+                </div>
+                <!-- Campos Devolución (Ocultos por defecto) -->
+                <div id="cajaDevolucion" class="mb-3" style="display: none;">
+                  <label class="form-label fw-semibold text-secondary"><i class="bi bi-arrow-return-left"></i> Motivo de Devolución</label>
+                  <input type="text" name="motivo_devolucion" id="inputMotivoDev" class="form-control mb-2" placeholder="Ej. Pieza defectuosa, Error en despacho">
+                  
+                  <label class="form-label fw-semibold text-secondary"><i class="bi bi-receipt"></i> Referencia Venta Original</label>
+                  <input type="text" name="referencia_venta" id="inputRefDev" class="form-control" placeholder="Ej. Factura #12345">
+                </div>
+
+                <div class="card bg-light border mb-3">
+                  <div class="card-body py-2 px-3 small text-muted">
+                    <div class="mb-2"><i class="bi bi-file-earmark-text text-warning me-2"></i><strong>Crear Reserva:</strong> Congela stock temporalmente para la venta.</div>
+                    <div class="mb-2"><i class="bi bi-cart-check text-success me-2"></i><strong>Venta Directa:</strong> Descuenta inventario sin cotizar.</div>
+                    <div><i class="bi bi-box-arrow-in-down text-dark me-2"></i><strong>Ingreso a Bodega:</strong> Aumenta existencias del producto.</div>
+                  </div>
+                </div>
+
+                <label class="form-label fw-semibold" id="labelCantidad"><i class="bi bi-handbag"></i> Cantidad</label>
+                <div class="input-group mb-3">
+                  <span class="input-group-text"><i class="bi bi-boxes"></i></span>
+                  <input type="number" name="cantidad" class="form-control" placeholder="Cantidad de piezas" min="0" required/>
+                </div>
+                <button type="submit" class="btn btn-success w-100">
+                  <i class="bi bi-check-circle me-2"></i> Procesar Transacción
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Agregamos SweetAlert2 para el popup -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function() {
+        const form = document.getElementById('formTransaccion');
+        const selectOperacion = document.getElementById('tipoMovimiento');
+        
+        // Cajas y campos
+        const cajaJustificacion = document.getElementById('cajaJustificacion');
+        const inputJustificacion = document.getElementById('inputJustificacion');
+        
+        const cajaDevolucion = document.getElementById('cajaDevolucion');
+        const inputMotivoDev = document.getElementById('inputMotivoDev');
+        const inputRefDev = document.getElementById('inputRefDev');
+        
+        const labelCantidad = document.getElementById('labelCantidad');
+        const inputCantidad = document.querySelector('input[name="cantidad"]');
+
+        const stockFisicoActual = parseInt("{{ p.cantidad }}");
+        const stockReservadoActual = parseInt("{{ p.stock_reservado }}");
+
+        // Mostrar/Ocultar campos según operación
+        selectOperacion.addEventListener('change', function() {
+          // Ocultamos todo por defecto
+          cajaJustificacion.style.display = 'none';
+          inputJustificacion.required = false;
+          cajaDevolucion.style.display = 'none';
+          inputMotivoDev.required = false;
+          inputRefDev.required = false;
+
+          if (this.value === 'Ajuste') {
+            cajaJustificacion.style.display = 'block';
+            inputJustificacion.required = true;
+            labelCantidad.innerHTML = '<i class="bi bi-calculator text-danger"></i> Nuevo Stock Total Físico';
+          } else if (this.value === 'Devolucion') {
+            cajaDevolucion.style.display = 'block';
+            inputMotivoDev.required = true;
+            inputRefDev.required = true;
+            labelCantidad.innerHTML = '<i class="bi bi-handbag"></i> Cantidad devuelta';
+          } else {
+            labelCantidad.innerHTML = '<i class="bi bi-handbag"></i> Cantidad a mover';
+          }
+        });
+
+        // Popup de validación
+        form.addEventListener('submit', function(e) {
+            e.preventDefault(); 
+
+            const tipo = selectOperacion.value;
+            const cantidad = parseInt(inputCantidad.value);
+            
+            if (isNaN(cantidad) || cantidad < 0) return;
+
+            let textoConfirmacion = '';
+            let nuevoFisico = stockFisicoActual;
+            let nuevoReservado = stockReservadoActual;
+
+            if (tipo === 'Cotizacion') {
+                nuevoReservado += cantidad;
+                if ((stockFisicoActual - stockReservadoActual) < cantidad) {
+                    Swal.fire('Operación Inválida', 'No hay suficiente stock disponible para crear esta reserva.', 'error');
+                    return;
+                }
+                textoConfirmacion = `Vas a crear una reserva por <b>${cantidad} u.</b><br>El Stock Reservado pasará de ${stockReservadoActual} a <b class="text-warning">${nuevoReservado}</b>.`;
+            } 
+            else if (tipo === 'Venta_Cotizacion') {
+                if (cantidad > stockReservadoActual) {
+                    Swal.fire('Operación Inválida', 'La cantidad que intentas despachar supera el stock que tenías reservado.', 'error');
+                    return;
+                }
+                nuevoFisico -= cantidad;
+                nuevoReservado -= cantidad;
+                textoConfirmacion = `Vas a despachar <b>${cantidad} u.</b> de tus reservas.<br>El Stock Físico bajará a <b>${nuevoFisico}</b>.<br>El Stock Reservado bajará a <b class="text-warning">${nuevoReservado}</b>.`;
+            }
+            else if (tipo === 'Salida') {
+                if ((stockFisicoActual - stockReservadoActual) < cantidad) {
+                    Swal.fire('Operación Inválida', 'No hay suficiente stock para realizar esta venta directa.', 'error');
+                    return;
+                }
+                nuevoFisico -= cantidad;
+                textoConfirmacion = `Vas a vender <b>${cantidad} u.</b> directamente.<br>El Stock Físico bajará de ${stockFisicoActual} a <b class="text-danger">${nuevoFisico}</b>.`;
+            }
+            else if (tipo === 'Entrada') {
+                nuevoFisico += cantidad;
+                textoConfirmacion = `Vas a ingresar <b>${cantidad} u.</b> a la bodega.<br>El Stock Físico subirá de ${stockFisicoActual} a <b class="text-success">${nuevoFisico}</b>.`;
+            }
+            else if (tipo === 'Ajuste') {
+                nuevoFisico = cantidad;
+                const diferencia = cantidad - stockFisicoActual;
+                
+                if(!inputJustificacion.value.trim()) {
+                    Swal.fire('Falta Información', 'La justificación es obligatoria para un ajuste.', 'warning');
+                    return;
+                }
+                let movText = diferencia >= 0 ? `Se añadirán ${diferencia}` : `Se restarán ${Math.abs(diferencia)}`;
+                textoConfirmacion = `Físicamente hay <b>${cantidad} u.</b> (${movText} u. en sistema).<br><br><b>Justificación:</b> "${inputJustificacion.value}"`;
+            }
+            else if (tipo === 'Devolucion') {
+                nuevoFisico += cantidad;
+                
+                if(!inputMotivoDev.value.trim() || !inputRefDev.value.trim()) {
+                    Swal.fire('Falta Información', 'El motivo y la referencia son obligatorios para registrar la devolución.', 'warning');
+                    return;
+                }
+                textoConfirmacion = `Vas a reingresar <b>${cantidad} u.</b> devueltas por el cliente.<br>El Stock Físico subirá de ${stockFisicoActual} a <b class="text-success">${nuevoFisico}</b>.<br><br><b>Motivo:</b> ${inputMotivoDev.value}<br><b>Ref Venta:</b> ${inputRefDev.value}`;
+            }
+
+            Swal.fire({
+                title: '¿Confirmar Movimiento?',
+                html: textoConfirmacion,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#198754',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, registrar',
+                cancelButtonText: 'Cancelar',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.submit(); 
+                }
+            });
+        });
+      });
+    </script>
+  </body>
+</html>

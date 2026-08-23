@@ -1,0 +1,49 @@
+.
+├── app
+│   ├── blueprints
+│   │   ├── auth.py
+│   │   ├── inventario.py
+│   │   ├── reportes.py
+│   │   └── usuarios.py
+│   ├── database.py
+│   ├── __init__.py
+│   ├── plantillas
+│   │   ├── auditoria.html
+│   │   ├── categorias.html
+│   │   ├── comprobante.html
+│   │   ├── detalle_producto.html
+│   │   ├── editar_producto.html
+│   │   ├── editar_usuario.html
+│   │   ├── includes
+│   │   │   └── navbar.html
+│   │   ├── inventario.html
+│   │   ├── login.html
+│   │   ├── reporte_inventario.html
+│   │   └── usuarios.html
+│   ├── services
+│   │   ├── email_service.py
+│   │   └── report_service.py
+│   └── static
+│       ├── archivos
+│       │   ├── BombaHidraulicaPrincipal.png
+│       │   ├── CadenaROdaje.png
+│       │   ├── CUchillas.png
+│       │   ├── Ficha_Bomba_Hidraulica.pdf
+│       │   ├── Ficha_Cadena_Rodaje.pdf
+│       │   ├── Ficha_navaja.pdf
+│       │   ├── Ficha_Radiador.pdf
+│       │   └── Radiador.png
+│       ├── css
+│       │   ├── inventario.css
+│       │   ├── login.css
+│       │   ├── navbar.css
+│       │   └── usuarios.css
+│       └── js
+│           └── login.js
+├── bd.py
+├── estructura_equi_parts.txt
+├── inventario.db
+├── reset.py
+└── run.py
+
+10 directories, 37 files
