@@ -13,13 +13,16 @@ def auditoria():
         return redirect(url_for('inventario.inventario'))
     
     conn = get_db_connection()
+    cursor = conn.cursor()
     query = '''SELECT m.id AS transaccion_id, m.fecha, m.tipo, m.cantidad, 
                u.username, u.rol, p.sku, p.nombre
                FROM movimientos m 
                LEFT JOIN usuarios u ON m.usuario_id = u.id 
                LEFT JOIN productos p ON m.producto_id = p.id
                ORDER BY m.fecha DESC'''
-    logs = conn.execute(query).fetchall()
+    cursor.execute(query)
+    logs = cursor.fetchall()
+    cursor.close()
     conn.close()
     return render_template('auditoria.html', logs=logs, username=session.get('username'))
 
@@ -29,12 +32,15 @@ def exportar_auditoria():
         return redirect(url_for('inventario.inventario'))
     
     conn = get_db_connection()
+    cursor = conn.cursor()
     query = '''SELECT m.id, m.fecha, u.username, u.rol, m.tipo, p.sku, p.nombre, m.cantidad
                FROM movimientos m 
                LEFT JOIN usuarios u ON m.usuario_id = u.id 
                LEFT JOIN productos p ON m.producto_id = p.id
                ORDER BY m.fecha DESC'''
-    logs = conn.execute(query).fetchall()
+    cursor.execute(query)
+    logs = cursor.fetchall()
+    cursor.close()
     conn.close()
 
     si = io.StringIO()
@@ -52,15 +58,20 @@ def generar_reporte():
         return redirect(url_for('inventario.inventario'))
     
     conn = get_db_connection()
+    cursor = conn.cursor()
     
     # 1. Calculamos el valor total del inventario
-    valor_total = conn.execute('SELECT SUM(cantidad * precio) as total FROM productos WHERE activo = 1').fetchone()['total'] or 0.0
+    cursor.execute('SELECT SUM(cantidad * precio) as total FROM productos WHERE activo = 1')
+    row = cursor.fetchone()
+    valor_total = row['total'] if row and row['total'] else 0.0
     
     # 2. Obtenemos los productos críticos ORDENADOS por gravedad (los de menor stock de primero)
-    criticos = conn.execute('''SELECT sku, nombre, cantidad, stock_reservado, stock_minimo, precio 
+    cursor.execute('''SELECT sku, nombre, cantidad, stock_reservado, stock_minimo, precio 
                                FROM productos 
                                WHERE (cantidad - stock_reservado) <= stock_minimo AND activo = 1
-                               ORDER BY (cantidad - stock_reservado) ASC''').fetchall()
+                               ORDER BY (cantidad - stock_reservado) ASC''')
+    criticos = cursor.fetchall()
+    cursor.close()
     conn.close()
     
     return render_template('reporte_inventario.html', valor_total=valor_total, criticos=criticos, username=session.get('username'))
@@ -71,10 +82,13 @@ def exportar_reporte_csv():
         return redirect(url_for('inventario.inventario'))
     
     conn = get_db_connection()
-    criticos = conn.execute('''SELECT sku, nombre, cantidad, stock_reservado, stock_minimo, precio 
+    cursor = conn.cursor()
+    cursor.execute('''SELECT sku, nombre, cantidad, stock_reservado, stock_minimo, precio 
                                FROM productos 
                                WHERE (cantidad - stock_reservado) <= stock_minimo AND activo = 1
-                               ORDER BY (cantidad - stock_reservado) ASC''').fetchall()
+                               ORDER BY (cantidad - stock_reservado) ASC''')
+    criticos = cursor.fetchall()
+    cursor.close()
     conn.close()
 
     si = io.StringIO()
@@ -98,6 +112,7 @@ def reporte_historico():
         return redirect(url_for('inventario.inventario'))
     
     conn = get_db_connection()
+    cursor = conn.cursor()
     productos = []
     fecha_consulta = ""
 
@@ -106,11 +121,13 @@ def reporte_historico():
         
         if fecha_consulta:
             fecha_fin = f"{fecha_consulta} 23:59:59"
-            prod_actuales = conn.execute('SELECT id, sku, nombre, descripcion, cantidad FROM productos WHERE activo = 1').fetchall()
+            cursor.execute('SELECT id, sku, nombre, descripcion, cantidad FROM productos WHERE activo = 1')
+            prod_actuales = cursor.fetchall()
             
             for p in prod_actuales:
-                movs = conn.execute('''SELECT tipo, cantidad FROM movimientos 
-                                       WHERE producto_id = ? AND fecha > ?''', (p['id'], fecha_fin)).fetchall()
+                cursor.execute('''SELECT tipo, cantidad FROM movimientos 
+                                       WHERE producto_id = %s AND fecha > %s''', (p['id'], fecha_fin))
+                movs = cursor.fetchall()
                 
                 stock_historico = p['cantidad']
                 
@@ -132,6 +149,7 @@ def reporte_historico():
                     'cantidad_historica': max(0, stock_historico)
                 })
 
+    cursor.close()
     conn.close()
     return render_template('reporte_historico.html', productos=productos, fecha_consulta=fecha_consulta, username=session.get('username'))
 
@@ -145,16 +163,19 @@ def exportar_historico_csv():
         return redirect(url_for('reportes.reporte_historico'))
         
     conn = get_db_connection()
+    cursor = conn.cursor()
     fecha_fin = f"{fecha_consulta} 23:59:59"
-    prod_actuales = conn.execute('SELECT id, sku, nombre, descripcion, cantidad FROM productos WHERE activo = 1').fetchall()
+    cursor.execute('SELECT id, sku, nombre, descripcion, cantidad FROM productos WHERE activo = 1')
+    prod_actuales = cursor.fetchall()
     
     si = io.StringIO()
     cw = csv.writer(si)
     cw.writerow(['Codigo (SKU)', 'Nombre del Repuesto', 'Descripcion', f'Cantidad Calculada al {fecha_consulta}'])
     
     for p in prod_actuales:
-        movs = conn.execute('''SELECT tipo, cantidad FROM movimientos 
-                               WHERE producto_id = ? AND fecha > ?''', (p['id'], fecha_fin)).fetchall()
+        cursor.execute('''SELECT tipo, cantidad FROM movimientos 
+                               WHERE producto_id = %s AND fecha > %s''', (p['id'], fecha_fin))
+        movs = cursor.fetchall()
         stock_historico = p['cantidad']
         
         for m in movs:
@@ -169,6 +190,7 @@ def exportar_historico_csv():
         
         cw.writerow([p['sku'], p['nombre'], p['descripcion'] or 'Sin descripcion', max(0, stock_historico)])
     
+    cursor.close()
     conn.close()
     output = si.getvalue()
     return Response(output, mimetype="text/csv", headers={"Content-Disposition": f"attachment;filename=Inventario_Historico_{fecha_consulta}.csv"})
@@ -185,6 +207,7 @@ def flujo_movimientos():
     tipo_filtro = request.args.get('tipo_filtro', 'Todos')
     
     conn = get_db_connection()
+    cursor = conn.cursor()
     
     # AGREGAMOS m.id A LA CONSULTA PARA PODER ABRIR EL COMPROBANTE
     query = '''SELECT m.id, p.sku, p.nombre, m.tipo, m.fecha, m.cantidad, u.username as responsable
@@ -196,24 +219,26 @@ def flujo_movimientos():
     
     # 1. Filtro por rango de fechas
     if fecha_inicio:
-        query += ' AND m.fecha >= ?'
+        query += ' AND m.fecha >= %s'
         params.append(f"{fecha_inicio} 00:00:00")
     if fecha_fin:
-        query += ' AND m.fecha <= ?'
+        query += ' AND m.fecha <= %s'
         params.append(f"{fecha_fin} 23:59:59")
         
     # 2. Filtro por tipo de movimiento
     if tipo_filtro == 'Entradas':
-        query += " AND (m.tipo = 'Entrada' OR m.tipo LIKE 'Devolución%' OR m.tipo = 'Creación de Producto')"
+        query += " AND (m.tipo = 'Entrada' OR m.tipo LIKE 'Devolución%%' OR m.tipo = 'Creación de Producto')"
     elif tipo_filtro == 'Salidas':
         query += " AND (m.tipo IN ('Salida', 'Venta_Cotizacion', 'Eliminación de Producto'))"
     elif tipo_filtro == 'Ajustes':
-        query += " AND m.tipo LIKE 'Ajuste%'"
+        query += " AND m.tipo LIKE 'Ajuste%%'"
         
     # 3. Orden cronológico descendente (el más reciente primero)
     query += ' ORDER BY m.fecha DESC'
     
-    movimientos = conn.execute(query, params).fetchall()
+    cursor.execute(query, params)
+    movimientos = cursor.fetchall()
+    cursor.close()
     conn.close()
     
     return render_template('reporte_movimientos.html', 
@@ -233,6 +258,7 @@ def exportar_flujo_csv():
     tipo_filtro = request.args.get('tipo_filtro', 'Todos')
     
     conn = get_db_connection()
+    cursor = conn.cursor()
     query = '''SELECT p.sku, p.nombre, m.tipo, m.fecha, m.cantidad, u.username as responsable
                FROM movimientos m
                LEFT JOIN productos p ON m.producto_id = p.id
@@ -241,21 +267,23 @@ def exportar_flujo_csv():
     params = []
     
     if fecha_inicio:
-        query += ' AND m.fecha >= ?'
+        query += ' AND m.fecha >= %s'
         params.append(f"{fecha_inicio} 00:00:00")
     if fecha_fin:
-        query += ' AND m.fecha <= ?'
+        query += ' AND m.fecha <= %s'
         params.append(f"{fecha_fin} 23:59:59")
         
     if tipo_filtro == 'Entradas':
-        query += " AND (m.tipo = 'Entrada' OR m.tipo LIKE 'Devolución%' OR m.tipo = 'Creación de Producto')"
+        query += " AND (m.tipo = 'Entrada' OR m.tipo LIKE 'Devolución%%' OR m.tipo = 'Creación de Producto')"
     elif tipo_filtro == 'Salidas':
         query += " AND (m.tipo IN ('Salida', 'Venta_Cotizacion', 'Eliminación de Producto'))"
     elif tipo_filtro == 'Ajustes':
-        query += " AND m.tipo LIKE 'Ajuste%'"
+        query += " AND m.tipo LIKE 'Ajuste%%'"
         
     query += ' ORDER BY m.fecha DESC'
-    movimientos = conn.execute(query, params).fetchall()
+    cursor.execute(query, params)
+    movimientos = cursor.fetchall()
+    cursor.close()
     conn.close()
     
     si = io.StringIO()
@@ -267,5 +295,3 @@ def exportar_flujo_csv():
         
     output = si.getvalue()
     return Response(output, mimetype="text/csv", headers={"Content-Disposition": f"attachment;filename=Flujo_Movimientos_{tipo_filtro}.csv"})
-
-    

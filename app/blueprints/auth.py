@@ -9,9 +9,15 @@ auth_bp = Blueprint('auth', __name__)
 def login():
     if request.method == 'POST':
         conn = get_db_connection()
-        user = conn.execute('SELECT * FROM usuarios WHERE username = ?', 
-                            (request.form['username'],)).fetchone()
-        conn.close()
+        user = None
+        try:
+            with conn.cursor() as cursor:
+                # Se cambia el ? de SQLite por %s para MySQL
+                cursor.execute('SELECT * FROM usuarios WHERE username = %s', 
+                               (request.form['username'],))
+                user = cursor.fetchone()
+        finally:
+            conn.close()
         
         if user and check_password_hash(user['password'], request.form['password']):
             session.clear() # Limpiamos cualquier sesión previa por seguridad

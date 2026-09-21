@@ -11,6 +11,7 @@ def usuarios():
         return redirect(url_for('inventario.inventario'))
     
     conn = get_db_connection()
+    cursor = conn.cursor()
     if request.method == 'POST':
         username = str(request.form['username']).strip()
         password = request.form['password']
@@ -19,14 +20,16 @@ def usuarios():
 
         try:
             hashed_password = generate_password_hash(password)
-            conn.execute('INSERT INTO usuarios (username, password, rol, email) VALUES (?, ?, ?, ?)', 
+            cursor.execute('INSERT INTO usuarios (username, password, rol, email) VALUES (%s, %s, %s, %s)', 
                          (username, hashed_password, rol, email))
             conn.commit()
             flash('Usuario creado exitosamente.', 'success')
         except Exception as e: 
             flash('Error: El nombre de usuario ya existe o los datos son inválidos.', 'danger')
             
-    u = conn.execute('SELECT id, username, rol, email FROM usuarios').fetchall()
+    cursor.execute('SELECT id, username, rol, email FROM usuarios')
+    u = cursor.fetchall()
+    cursor.close()
     conn.close()
     return render_template('usuarios.html', usuarios=u, username=session.get('username'))
 
@@ -36,6 +39,7 @@ def editar_usuario(id):
         return redirect(url_for('inventario.inventario'))
     
     conn = get_db_connection()
+    cursor = conn.cursor()
     if request.method == 'POST':
         nueva_clave = request.form.get('password')
         nuevo_rol = request.form.get('rol')
@@ -43,17 +47,21 @@ def editar_usuario(id):
         
         if nueva_clave:
             hashed_password = generate_password_hash(nueva_clave)
-            conn.execute('UPDATE usuarios SET password = ?, rol = ?, email = ? WHERE id = ?', 
+            cursor.execute('UPDATE usuarios SET password = %s, rol = %s, email = %s WHERE id = %s', 
                          (hashed_password, nuevo_rol, nuevo_email, id))
         else:
-            conn.execute('UPDATE usuarios SET rol = ?, email = ? WHERE id = ?', 
+            cursor.execute('UPDATE usuarios SET rol = %s, email = %s WHERE id = %s', 
                          (nuevo_rol, nuevo_email, id))
         
         conn.commit()
         flash('Usuario actualizado correctamente.', 'success')
+        cursor.close()
+        conn.close()
         return redirect(url_for('usuarios.usuarios'))
         
-    usuario = conn.execute('SELECT id, username, rol, email FROM usuarios WHERE id = ?', (id,)).fetchone()
+    cursor.execute('SELECT id, username, rol, email FROM usuarios WHERE id = %s', (id,))
+    usuario = cursor.fetchone()
+    cursor.close()
     conn.close()
     return render_template('editar_usuario.html', u=usuario)
 
@@ -67,8 +75,10 @@ def eliminar_usuario(id):
         return redirect(url_for('usuarios.usuarios'))
         
     conn = get_db_connection()
-    conn.execute('DELETE FROM usuarios WHERE id = ?', (id,))
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM usuarios WHERE id = %s', (id,))
     conn.commit()
+    cursor.close()
     conn.close()
     flash('Usuario eliminado.', 'success')
     return redirect(url_for('usuarios.usuarios'))

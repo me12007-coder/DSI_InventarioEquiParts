@@ -44,24 +44,30 @@ def inventario():
         try:
             cursor = conn.cursor()
             cursor.execute('''INSERT INTO productos (sku, nombre, descripcion, cantidad, stock_minimo, precio, categoria_id, ubicacion, foto, ficha_pdf, activo) 
-                              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)''',
+                              VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 1)''',
                            (sku, nombre, descripcion, cantidad, stock_minimo, precio, categoria_id, ubicacion, foto_path, pdf_path))
             nuevo_id = cursor.lastrowid
             
             cursor.execute('''INSERT INTO movimientos (producto_id, usuario_id, tipo, cantidad) 
-                              VALUES (?, ?, 'Creación de Producto', ?)''', 
+                              VALUES (%s, %s, 'Creación de Producto', %s)''', 
                            (nuevo_id, session['user_id'], cantidad))
             conn.commit()
             flash('Producto creado exitosamente.', 'success')
         except Exception as e:
             flash('Error al crear el producto (Verifique que el SKU no exista).', 'danger')
+        finally:
+            cursor.close()
 
     busqueda = request.args.get('q', '')
     query = '''SELECT p.*, c.nombre as categoria_nombre FROM productos p 
                LEFT JOIN categorias c ON p.categoria_id = c.id
-               WHERE p.activo = 1 AND (p.sku LIKE ? OR p.nombre LIKE ?)'''
-    productos = conn.execute(query, ('%'+busqueda+'%', '%'+busqueda+'%')).fetchall()
-    categorias = conn.execute('SELECT * FROM categorias').fetchall()
+               WHERE p.activo = 1 AND (p.sku LIKE %s OR p.nombre LIKE %s)'''
+    cursor = conn.cursor()
+    cursor.execute(query, ('%'+busqueda+'%', '%'+busqueda+'%'))
+    productos = cursor.fetchall()
+    
+    cursor.execute('SELECT * FROM categorias')
+    categorias = cursor.fetchall()
     
     # Evaluar alertas de stock crítico para los popups
     alertas_stock = []
@@ -70,6 +76,7 @@ def inventario():
         if stock_real <= p['stock_minimo']:
             alertas_stock.append({'nombre': p['nombre'], 'stock': stock_real, 'minimo': p['stock_minimo']})
             
+    cursor.close()
     conn.close()
     
     return render_template('inventario.html', productos=productos, categorias=categorias, 
@@ -82,21 +89,27 @@ def editar_producto(id):
         return redirect(url_for('inventario.inventario'))
     
     conn = get_db_connection()
+    cursor = conn.cursor()
     if request.method == 'POST':
         data = request.form
         cat_raw = data.get('categoria_id')
         categoria_id = int(cat_raw) if cat_raw else None
         
-        conn.execute('''UPDATE productos SET nombre = ?, descripcion = ?, precio = ?, ubicacion = ?, categoria_id = ?, cantidad = ?
-                        WHERE id = ?''', 
+        cursor.execute('''UPDATE productos SET nombre = %s, descripcion = %s, precio = %s, ubicacion = %s, categoria_id = %s, cantidad = %s
+                        WHERE id = %s''', 
                      (str(data.get('nombre')), str(data.get('descripcion')), float(data.get('precio')), 
                       str(data.get('ubicacion')), categoria_id, int(data.get('cantidad', 0)), id))
         conn.commit()
         flash('Producto actualizado.', 'success')
+        cursor.close()
+        conn.close()
         return redirect(url_for('inventario.inventario'))
     
-    p = conn.execute('SELECT * FROM productos WHERE id = ?', (id,)).fetchone()
-    c = conn.execute('SELECT * FROM categorias').fetchall()
+    cursor.execute('SELECT * FROM productos WHERE id = %s', (id,))
+    p = cursor.fetchone()
+    cursor.execute('SELECT * FROM categorias')
+    c = cursor.fetchall()
+    cursor.close()
     conn.close()
     return render_template('editar_producto.html', p=p, categorias=c)
 
@@ -106,16 +119,18 @@ def eliminar_producto(id):
         return redirect(url_for('inventario.inventario'))
     
     conn = get_db_connection()
+    cursor = conn.cursor()
     try:
-        conn.execute('UPDATE productos SET activo = 0 WHERE id = ?', (id,))
-        conn.execute('''INSERT INTO movimientos (producto_id, usuario_id, tipo, cantidad) 
-                        VALUES (?, ?, 'Eliminación de Producto', 0)''', 
+        cursor.execute('UPDATE productos SET activo = 0 WHERE id = %s', (id,))
+        cursor.execute('''INSERT INTO movimientos (producto_id, usuario_id, tipo, cantidad) 
+                        VALUES (%s, %s, 'Eliminación de Producto', 0)''', 
                      (id, session['user_id']))
         conn.commit()
         flash('Producto eliminado.', 'success')
     except Exception as e: 
         flash(f'Error: {str(e)}', 'danger')
         
+    cursor.close()
     conn.close()
     return redirect(url_for('inventario.inventario'))
 
@@ -125,15 +140,18 @@ def categorias():
         return redirect(url_for('inventario.inventario'))
     
     conn = get_db_connection()
+    cursor = conn.cursor()
     if request.method == 'POST':
         try:
-            conn.execute('INSERT INTO categorias (nombre) VALUES (?)', (str(request.form['nombre']),))
+            cursor.execute('INSERT INTO categorias (nombre) VALUES (%s)', (str(request.form['nombre']),))
             conn.commit()
             flash('Categoría creada.', 'success')
         except: 
             flash('La categoría ya existe.', 'danger')
             
-    c = conn.execute('SELECT * FROM categorias').fetchall()
+    cursor.execute('SELECT * FROM categorias')
+    c = cursor.fetchall()
+    cursor.close()
     conn.close()
     return render_template('categorias.html', categorias=c)
 
@@ -143,9 +161,11 @@ def eliminar_categoria(id):
         return redirect(url_for('inventario.inventario'))
     
     conn = get_db_connection()
-    conn.execute('UPDATE productos SET categoria_id = NULL WHERE categoria_id = ?', (id,))
-    conn.execute('DELETE FROM categorias WHERE id = ?', (id,))
+    cursor = conn.cursor()
+    cursor.execute('UPDATE productos SET categoria_id = NULL WHERE categoria_id = %s', (id,))
+    cursor.execute('DELETE FROM categorias WHERE id = %s', (id,))
     conn.commit()
+    cursor.close()
     conn.close()
     return redirect(url_for('inventario.categorias'))
 
@@ -155,16 +175,17 @@ def detalle_producto(id):
         return redirect(url_for('auth.login'))
     
     conn = get_db_connection()
+    cursor = conn.cursor()
 
     if request.method == 'POST':
         tipo = request.form.get('tipo_movimiento', request.form.get('tipo'))
         cantidad_mov = int(request.form['cantidad'])
-        p = conn.execute('SELECT nombre, sku, cantidad, stock_reservado, stock_minimo FROM productos WHERE id = ?', (id,)).fetchone()
+        cursor.execute('SELECT nombre, sku, cantidad, stock_reservado, stock_minimo FROM productos WHERE id = %s', (id,))
+        p = cursor.fetchone()
         
         stock_fisico = p['cantidad']
         stock_reservado = p['stock_reservado']
         stock_disponible = stock_fisico - stock_reservado
-        cursor = conn.cursor()
         error = False
 
         if tipo == 'Cotizacion':
@@ -172,7 +193,7 @@ def detalle_producto(id):
                 flash('Error: No hay suficiente stock disponible para reservar.', 'danger')
                 error = True
             else:
-                cursor.execute('UPDATE productos SET stock_reservado = stock_reservado + ? WHERE id = ?', (cantidad_mov, id))
+                cursor.execute('UPDATE productos SET stock_reservado = stock_reservado + %s WHERE id = %s', (cantidad_mov, id))
                 flash('Cotización (Reserva) creada correctamente.', 'info')
                 
         elif tipo == 'Venta_Cotizacion':
@@ -181,7 +202,7 @@ def detalle_producto(id):
                 error = True
             else:
                 nueva_cantidad = stock_fisico - cantidad_mov
-                cursor.execute('UPDATE productos SET cantidad = ?, stock_reservado = stock_reservado - ? WHERE id = ?', (nueva_cantidad, cantidad_mov, id))
+                cursor.execute('UPDATE productos SET cantidad = %s, stock_reservado = stock_reservado - %s WHERE id = %s', (nueva_cantidad, cantidad_mov, id))
                 flash('Venta concretada desde la reserva.', 'success')
                 
         elif tipo == 'Salida':
@@ -190,17 +211,13 @@ def detalle_producto(id):
                 error = True
             else:
                 nueva_cantidad = stock_fisico - cantidad_mov
-                cursor.execute('UPDATE productos SET cantidad = ? WHERE id = ?', (nueva_cantidad, id))
+                cursor.execute('UPDATE productos SET cantidad = %s WHERE id = %s', (nueva_cantidad, id))
                 flash('Venta directa (Salida) registrada.', 'success')
                 
         elif tipo == 'Entrada':
-            cursor.execute('UPDATE productos SET cantidad = cantidad + ? WHERE id = ?', (cantidad_mov, id))
-            flash('Ingreso de mercadería registrado exitosamente.', 'success')
-        elif tipo == 'Entrada':
-            cursor.execute('UPDATE productos SET cantidad = cantidad + ? WHERE id = ?', (cantidad_mov, id))
+            cursor.execute('UPDATE productos SET cantidad = cantidad + %s WHERE id = %s', (cantidad_mov, id))
             flash('Ingreso de mercadería registrado exitosamente.', 'success')
             
-        # --- NUEVO CÓDIGO PARA HU-17: AJUSTE MANUAL ---
         elif tipo == 'Ajuste':
             if session.get('rol') != 'Administrador':
                 flash('Acceso denegado: Solo los administradores pueden realizar ajustes manuales.', 'danger')
@@ -211,18 +228,14 @@ def detalle_producto(id):
                     flash('Error: La justificación es obligatoria para un ajuste manual.', 'danger')
                     error = True
                 else:
-                    # En un ajuste, 'cantidad_mov' representa el NUEVO conteo físico total.
-                    # Calculamos la diferencia para que el historial muestre cuánto se sumó o restó.
                     diferencia = cantidad_mov - stock_fisico 
                     
-                    cursor.execute('UPDATE productos SET cantidad = ? WHERE id = ?', (cantidad_mov, id))
+                    cursor.execute('UPDATE productos SET cantidad = %s WHERE id = %s', (cantidad_mov, id))
                     flash('Ajuste de inventario registrado correctamente.', 'success')
                     
-                    # Modificamos las variables para que el INSERT posterior lo guarde bien
                     tipo = f"Ajuste manual: {justificacion}"
                     cantidad_mov = diferencia
-        # ----------------------------------------------
-        # --- NUEVO CÓDIGO PARA HU-20: DEVOLUCIONES ---
+
         elif tipo == 'Devolucion':
             if session.get('rol') != 'Administrador':
                 flash('Acceso denegado: Solo los administradores pueden registrar devoluciones.', 'danger')
@@ -234,45 +247,47 @@ def detalle_producto(id):
                     flash('Error: El motivo y la referencia son obligatorios para una devolución.', 'danger')
                     error = True
                 else:
-                    cursor.execute('UPDATE productos SET cantidad = cantidad + ? WHERE id = ?', (cantidad_mov, id))
+                    cursor.execute('UPDATE productos SET cantidad = cantidad + %s WHERE id = %s', (cantidad_mov, id))
                     flash('Devolución registrada, el stock ha reingresado.', 'success')
-                    # Renombramos el tipo para que guarde los datos en el historial
                     tipo = f"Devolución: {motivo} (Ref: {referencia})"
-        # ----------------------------------------------
 
         if not error:
-            cursor.execute('INSERT INTO movimientos (producto_id, usuario_id, tipo, cantidad) VALUES (?, ?, ?, ?)',
+            cursor.execute('INSERT INTO movimientos (producto_id, usuario_id, tipo, cantidad) VALUES (%s, %s, %s, %s)',
                            (id, session['user_id'], tipo, cantidad_mov))
             mov_id = cursor.lastrowid
             
-            # --- LÓGICA DE ALERTAS POR CORREO (SEGUNDO PLANO) ---
             if tipo in ['Salida', 'Venta_Cotizacion', 'Cotizacion'] or tipo.startswith('Ajuste'):
-                p_actualizado = conn.execute('SELECT sku, nombre, cantidad, stock_reservado, stock_minimo FROM productos WHERE id = ?', (id,)).fetchone()
+                cursor.execute('SELECT sku, nombre, cantidad, stock_reservado, stock_minimo FROM productos WHERE id = %s', (id,))
+                p_actualizado = cursor.fetchone()
                 stock_real = p_actualizado['cantidad'] - p_actualizado['stock_reservado']
                 
                 if stock_real <= p_actualizado['stock_minimo']:
-                    admins = conn.execute("SELECT email FROM usuarios WHERE rol = 'Administrador' AND email IS NOT NULL").fetchall()
+                    cursor.execute("SELECT email FROM usuarios WHERE rol = 'Administrador' AND email IS NOT NULL")
+                    admins = cursor.fetchall()
                     correos_admin = [admin['email'] for admin in admins if admin['email']]
                     
                     if correos_admin:
                         app_actual = current_app._get_current_object()
                         def enviar_async(app, nombre, sku, stock, correos, p_id, u_id):
                             with app.app_context():
-                                # Ahora enviamos también el ID del producto y del usuario
                                 enviar_alerta_stock(nombre, sku, stock, correos, p_id, u_id)
         
                         hilo = Thread(target=enviar_async, args=(app_actual, p_actualizado['nombre'], p_actualizado['sku'], stock_real, correos_admin, id, session['user_id']))
                         hilo.start()
-            # ------------------------------------------------------
 
             conn.commit()
             if tipo in ['Salida', 'Venta_Cotizacion', 'Cotizacion']or tipo.startswith('Devolución'):
+                cursor.close()
+                conn.close()
                 return redirect(url_for('inventario.comprobante', mov_id=mov_id))
 
-    producto = conn.execute('SELECT p.*, c.nombre as categoria_nombre FROM productos p LEFT JOIN categorias c ON p.categoria_id = c.id WHERE p.id = ?', (id,)).fetchone()
-    historial = conn.execute('''SELECT m.*, u.username FROM movimientos m 
+    cursor.execute('SELECT p.*, c.nombre as categoria_nombre FROM productos p LEFT JOIN categorias c ON p.categoria_id = c.id WHERE p.id = %s', (id,))
+    producto = cursor.fetchone()
+    cursor.execute('''SELECT m.*, u.username FROM movimientos m 
                                 JOIN usuarios u ON m.usuario_id = u.id 
-                                WHERE m.producto_id = ? ORDER BY m.fecha DESC''', (id,)).fetchall()
+                                WHERE m.producto_id = %s ORDER BY m.fecha DESC''', (id,))
+    historial = cursor.fetchall()
+    cursor.close()
     conn.close()
     return render_template('detalle_producto.html', p=producto, movimientos=historial)
 
@@ -283,16 +298,18 @@ def comprobante(mov_id):
         return redirect(url_for('auth.login'))
         
     conn = get_db_connection()
-    # Hacemos JOIN para traer los detalles del producto y del usuario responsable
-    mov = conn.execute('''
+    cursor = conn.cursor()
+    cursor.execute('''
         SELECT m.id, m.fecha, m.tipo, m.cantidad,
                p.sku, p.nombre as repuesto,
                u.username as responsable
         FROM movimientos m
         JOIN productos p ON m.producto_id = p.id
         JOIN usuarios u ON m.usuario_id = u.id
-        WHERE m.id = ?
-    ''', (mov_id,)).fetchone()
+        WHERE m.id = %s
+    ''', (mov_id,))
+    mov = cursor.fetchone()
+    cursor.close()
     conn.close()
 
     if not mov:
@@ -300,6 +317,7 @@ def comprobante(mov_id):
         return redirect(url_for('inventario.inventario'))
 
     return render_template('comprobante.html', m=mov)
+
 @inventario_bp.route('/importar_csv', methods=['POST'])
 def importar_csv():
     if 'user_id' not in session or session.get('rol') not in ['Administrador', 'Bodeguero']:
@@ -337,18 +355,19 @@ def importar_csv():
 
                     try:
                         cursor.execute('''INSERT INTO productos (sku, nombre, descripcion, cantidad, stock_minimo, precio, categoria_id, ubicacion, activo)
-                                          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)''',
+                                          VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 1)''',
                                        (sku, nombre, descripcion, cantidad, stock_minimo, precio, categoria_id, ubicacion))
                         nuevo_id = cursor.lastrowid
                         
                         cursor.execute('''INSERT INTO movimientos (producto_id, usuario_id, tipo, cantidad)
-                                          VALUES (?, ?, 'Importación Masiva (CSV)', ?)''',
+                                          VALUES (%s, %s, 'Importación Masiva (CSV)', %s)''',
                                        (nuevo_id, session['user_id'], cantidad))
                         productos_importados += 1
                     except Exception:
                         pass # Ignorar filas defectuosas o con SKU duplicado
 
             conn.commit()
+            cursor.close()
             conn.close()
             
             if productos_importados > 0:
@@ -363,10 +382,10 @@ def importar_csv():
 
     return redirect(url_for('inventario.inventario'))
 
-# MODIFICACIONES AGOSTO 2026
 @inventario_bp.route('/api/productos/filtrar', methods=['GET'])
 def api_filtrar_productos():
     conn = get_db_connection()
+    cursor = conn.cursor()
     cat_id = request.args.get('categoria_id', '')
     busqueda = request.args.get('q', '')
 
@@ -376,15 +395,16 @@ def api_filtrar_productos():
     params = []
 
     if cat_id:
-        query += ' AND p.categoria_id = ?'
+        query += ' AND p.categoria_id = %s'
         params.append(cat_id)
     
     if busqueda:
         # Busca por SKU, Nombre (donde podría estar la marca) o Descripción
-        query += ' AND (p.sku LIKE ? OR p.nombre LIKE ? OR p.descripcion LIKE ?)'
+        query += ' AND (p.sku LIKE %s OR p.nombre LIKE %s OR p.descripcion LIKE %s)'
         params.extend([f'%{busqueda}%', f'%{busqueda}%', f'%{busqueda}%'])
 
-    productos = conn.execute(query, params).fetchall()
+    cursor.execute(query, params)
+    productos = cursor.fetchall()
     
     prod_list = []
     for p in productos:
@@ -400,10 +420,10 @@ def api_filtrar_productos():
             'categoria_nombre': p['categoria_nombre']
         })
     
+    cursor.close()
     conn.close()
     return jsonify({'total': len(prod_list), 'productos': prod_list})
 
-# --- NUEVO CÓDIGO PARA HU-23: CAMPANA DE NOTIFICACIONES ---
 @inventario_bp.route('/api/notificaciones', methods=['GET'])
 def api_notificaciones():
     # Solo los administradores reciben estas alertas
@@ -411,16 +431,16 @@ def api_notificaciones():
         return current_app.response_class(response='{"alertas": 0}', status=200, mimetype='application/json')
     
     conn = get_db_connection()
-    # Contamos cuántos productos están en stock crítico/agotado
-    criticos = conn.execute('''SELECT COUNT(*) as total 
+    cursor = conn.cursor()
+    cursor.execute('''SELECT COUNT(*) as total 
                                FROM productos 
-                               WHERE (cantidad - stock_reservado) <= stock_minimo AND activo = 1''').fetchone()
+                               WHERE (cantidad - stock_reservado) <= stock_minimo AND activo = 1''')
+    criticos = cursor.fetchone()
+    cursor.close()
     conn.close()
     
     # Retornamos el número en formato JSON
     return jsonify({'alertas': criticos['total']})
-
-# ---- CODIGO PARA LA IMPRESIÓN DE LA TRZA  DE CADA ELEMENTO 
 
 @inventario_bp.route('/exportar_trazabilidad/<int:id>')
 def exportar_trazabilidad_csv(id):
@@ -428,16 +448,21 @@ def exportar_trazabilidad_csv(id):
         return redirect(url_for('auth.login'))
     
     conn = get_db_connection()
-    producto = conn.execute('SELECT sku, nombre FROM productos WHERE id = ?', (id,)).fetchone()
+    cursor = conn.cursor()
+    cursor.execute('SELECT sku, nombre FROM productos WHERE id = %s', (id,))
+    producto = cursor.fetchone()
     
     if not producto:
+        cursor.close()
         conn.close()
         return redirect(url_for('inventario.inventario'))
         
-    historial = conn.execute('''SELECT m.fecha, u.username, m.tipo, m.cantidad 
+    cursor.execute('''SELECT m.fecha, u.username, m.tipo, m.cantidad 
                                 FROM movimientos m 
                                 JOIN usuarios u ON m.usuario_id = u.id 
-                                WHERE m.producto_id = ? ORDER BY m.fecha DESC''', (id,)).fetchall()
+                                WHERE m.producto_id = %s ORDER BY m.fecha DESC''', (id,))
+    historial = cursor.fetchall()
+    cursor.close()
     conn.close()
 
     si = io.StringIO()

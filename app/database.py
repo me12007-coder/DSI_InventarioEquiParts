@@ -1,8 +1,12 @@
-import sqlite3
+import pymysql
 
 def get_db_connection():
-    # Como ejecutaremos la app desde la raíz, buscará inventario.db ahí
-    conn = sqlite3.connect('inventario.db')
-    conn.row_factory = sqlite3.Row
-    conn.execute('PRAGMA foreign_keys = ON')
-    return conn
+    # Retorna la conexión a MariaDB. Asegúrate de que el nombre de esta función 
+    # coincida con el que ya usabas en tus blueprints (ej. get_db o get_connection)
+    return pymysql.connect(
+        host='localhost',
+        user='equiparts_user',
+        password='XG0szw$G',
+        database='equiparts_db',
+        cursorclass=pymysql.cursors.DictCursor
+    )
