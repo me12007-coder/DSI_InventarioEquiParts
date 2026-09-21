@@ -1,123 +1,136 @@
-.btn-info {
-  background-color: #0679f4;
-  color: white;
-  border: none;
-}
-.btn-info:hover {
-  background-color: #0b7dda;
-  color: white;
+/* Fondo general Gris Hielo */
+body, body.bg-light { 
+  background-color: #F3F5F2 !important; 
 }
 
-.btn-warning {
-  background-color: #ff9800;
-  color: white;
-  border: none;
-}
-
-.btn-warning:hover {
-  background-color: #e68a00;
-  color: white;
-}
-
-.btn-danger {
-  background-color: #dc3545;
-  color: white;
-  border: none;
-}
-
-.btn-danger:hover {
-  background-color: #bb2d3b;
-  color: white;
-}
-
-.btn-success {
-  background: #198754;
-  color: white;
-  font-weight: 600;
-  border: none;
-  padding: 10px;
-}
-
-.btn-dark {
-  font-weight: 600;
-  padding: 10px;
-  border: none;
-}
-
-.btn-success :hover {
-  background: #157347;
-  color: white;
-}
-
+/* Encabezados de Tarjetas (Verde Medio) */
 .card-header {
-  font-weight: 600;
-  background-color: #0d6efd;
-  color: white;
+  background-color: #356859 !important; 
+  color: #FFFFFF !important;
+  border-bottom: 3px solid #C47A3A !important;
 }
 
-.form-label {
-  margin-bottom: 4px;
-  font-size: 0.9rem;
-  color: #495057;
+/* Tablas Principales */
+.table thead th, .table-dark th {
+  background-color: #18392B !important; 
+  color: #FFFFFF !important;
+  border-bottom: 2px solid #C47A3A !important;
 }
 
-.form-control,
-.form-select {
-  border-radius: 8px;
+/* ---------------------------------------------------
+   BOTONES ESTILO INDUSTRIAL MATE
+------------------------------------------------------ */
+.btn {
+  border-radius: 6px !important;
+  font-weight: 600 !important;
+  border: none !important;
+  transition: all 0.2s ease-in-out;
 }
 
-.seccion-formulario {
-  display: flex;
+/* Botón "Ver" / Acción Principal (Verde Oscuro) */
+.btn-primary, .btn-info, .bg-primary {
+  background-color: #18392B !important;
+  color: #FFFFFF !important;
+}
+.btn-primary:hover, .btn-info:hover {
+  background-color: #10261d !important;
+}
+
+/* Botón "Editar" / Acento (Cobre/Ámbar) */
+.btn-warning, .bg-warning {
+  background-color: #C47A3A !important;
+  color: #202522 !important; /* Texto oscuro para mejor lectura */
+}
+.btn-warning:hover {
+  background-color: #a6652e !important;
+}
+
+/* Botón "Eliminar" (Rojo Mate) */
+.btn-danger, .bg-danger {
+  background-color: #DE3B40 !important;
+  color: #FFFFFF !important;
+}
+.btn-danger:hover { 
+  background-color: #b82d32 !important; 
+}
+
+/* Botón Secundario "Limpiar" (Gris Acero) */
+.btn-secondary, .btn-dark {
+  background-color: #6B7280 !important;
+  color: #FFFFFF !important;
+}
+.btn-secondary:hover, .btn-dark:hover {
+  background-color: #4b5563 !important;
+}
+
+/* Botón Guardar / Nuevo Producto (Verde Medio) */
+.btn-success, .bg-success {
+  background-color: #356859 !important;
+  color: #FFFFFF !important;
+}
+.btn-success:hover {
+  background-color: #264a40 !important;
+}
+
+/* ---------------------------------------------------
+   INDICADORES DE ESTADO (PASTILLAS CON PUNTO)
+------------------------------------------------------ */
+.estado-pill {
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #080808;
-
-  margin-top: 20px;
-  margin-bottom: 15px;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 50rem;
+  font-weight: 700;
+  font-size: 0.85rem;
 }
 
-.seccion-formulario::after {
+.estado-pill::before {
   content: "";
-  flex: 1;
-  height: 1px;
-  background-color: #dee2e6;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
 }
 
-.card-body {
-  padding: 1.25rem;
+/* Estado: Disponible */
+.estado-disponible {
+  background-color: #DCFCE7 !important; /* Fondo verde muy claro */
+  color: #166534 !important; /* Texto verde oscuro */
+}
+.estado-disponible::before { background-color: #22C55E; }
+
+/* Estado: Stock Bajo */
+.estado-bajo {
+  background-color: #FEF3C7 !important;
+  color: #92400E !important;
+}
+.estado-bajo::before { background-color: #F59E0B; }
+
+/* Estado: Sin Stock */
+.estado-sinstock {
+  background-color: #FEE2E2 !important;
+  color: #991B1B !important;
+}
+.estado-sinstock::before { background-color: #EF4444; }
+
+
+/* Textos y Formularios */
+.text-muted, .form-label, .stock-detalle {
+  color: #6B7280 !important;
+  font-weight: 600;
 }
 
-.input-group-text {
-  background-color: #f8f9fa;
-  display: flex;
-  align-items: center;
-  padding: 0.375rem 0.75rem;
+h1, h2, h3, h4, h5, h6, .card-title, .seccion-formulario {
+   color: #202522 !important; 
 }
 
-.input-group .form-control,
-.input-group .form-select {
-  border-left: none;
+.form-control, .form-select {
+  border-radius: 8px; 
+  border: 1px solid #d1d5db; 
 }
 
-.stock-disponible {
-    text-align: center;
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #198754;
-}
-
-.stock-disponible small {
-  text-align: center;
-}
-
-.stock-detalle {
-    text-align: center;
-    display: block;
-    width: 100%;
-    font-size: 0.8rem;
-    color: #4b4f52;
-    margin-top: 4px;
+.input-group-text { 
+  background-color: #356859 !important; 
+  color: white !important; 
+  border: none; 
 }

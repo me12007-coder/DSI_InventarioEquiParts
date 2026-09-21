@@ -1,6 +1,5 @@
-.rol-admin,
-.rol-bodega,
-.rol-vendedor {
+/* Etiquetas de Roles */
+.rol-admin, .rol-bodega, .rol-vendedor {
   display: inline-flex;
   align-items: center;
   padding: 6px 12px;
@@ -9,21 +8,18 @@
   font-weight: 600;
 }
 
+/* Colores de roles vinculados a la paleta */
 .rol-admin {
-  background: #212529;
-  color: white;
+  background-color: #1C252C !important; /* Azul grafito oscuro */
+  color: white !important;
 }
 
 .rol-bodega {
-  background: #0d6efd;
-  color: white;
+  background-color: #344955 !important; /* Azul acero */
+  color: white !important;
 }
 
 .rol-vendedor {
-  background: #198754;
-  color: white;
-}
-
-.btn-secondary {
-  background-color: #555555;
+  background-color: #6B7785 !important; /* Gris acero claro */
+  color: white !important;
 }

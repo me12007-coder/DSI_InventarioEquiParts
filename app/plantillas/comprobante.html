@@ -2,61 +2,87 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Detalle de Movimiento - Equi-Parts</title>
+    <title>Comprobante de Operación #{{ m.id }} - Equi-Parts S&S</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     
     <style>
-        /* Al imprimir, escondemos los botones y dejamos solo el "ticket" */
+        body {
+            background-color: #F3F5F2 !important; /* Gris hielo industrial */
+        }
+        .comprobante-card {
+            border-top: 5px solid #18392B;
+            border-bottom: 5px solid #C47A3A;
+            border-radius: 12px;
+        }
         @media print {
             .no-print { display: none !important; }
             body { background-color: white !important; }
-            .card { border: none !important; box-shadow: none !important; }
+            .comprobante-card { border: none !important; box-shadow: none !important; }
         }
     </style>
 </head>
-<body class="bg-secondary d-flex justify-content-center align-items-center vh-100">
+<body class="d-flex justify-content-center align-items-center min-vh-100 py-4">
     
-    <div class="card shadow-lg p-4" style="max-width: 500px; width: 100%;">
-        <div class="text-center mb-4 border-bottom pb-3">
-            <h2 class="fw-bold"><i class="bi bi-receipt text-primary me-2"></i>Equi-Parts S&S</h2>
-            <h5 class="text-muted mb-0">Detalle de Operación #{{ m.id }}</h5>
+    <div class="card shadow-lg p-4 comprobante-card bg-white" style="max-width: 550px; width: 100%;">
+        
+        <!-- Cabecera formal estilo documento interno -->
+        <div class="text-center mb-3 border-bottom pb-3">
+            <div class="d-flex align-items-center justify-content-center gap-2 mb-1">
+                <i class="bi bi-gear-fill fs-3" style="color: #C47A3A;"></i>
+                <h3 class="fw-bold m-0" style="color: #18392B;">Equi-Parts S&S</h3>
+            </div>
+            <p class="text-muted small m-0">Sistema de Control y Gestión de Repuestos</p>
+            <span class="badge bg-dark mt-2">COMPROBANTE DE MOVIMIENTO INTERNO</span>
         </div>
 
+        <!-- Información de control -->
+        <div class="row small text-muted mb-3 bg-light p-2 rounded border mx-0">
+            <div class="col-6">
+                <strong>Operación ID:</strong> #{{ m.id }}
+            </div>
+            <div class="col-6 text-end">
+                <strong>Fecha:</strong> {{ m.fecha }}
+            </div>
+        </div>
+
+        <!-- Detalles del ítem y movimiento -->
         <ul class="list-group list-group-flush mb-4">
-            <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+            <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-0">
                 <span class="text-muted"><i class="bi bi-upc-scan me-2"></i>Código (SKU):</span>
                 <span class="fw-bold text-dark">{{ m.sku }}</span>
             </li>
-            <li class="list-group-item d-flex justify-content-between align-items-center py-3">
-                <span class="text-muted"><i class="bi bi-gear me-2"></i>Repuesto:</span>
+            <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-0">
+                <span class="text-muted"><i class="bi bi-box-seam me-2"></i>Repuesto:</span>
                 <span class="fw-bold text-dark text-end ms-3">{{ m.repuesto }}</span>
             </li>
-            <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+            <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-0">
                 <span class="text-muted"><i class="bi bi-arrow-left-right me-2"></i>Tipo de Movimiento:</span>
-                <span class="fw-bold text-primary">{{ m.tipo }}</span>
+                <span class="fw-bold px-2 py-1 rounded" style="background-color: #e2e8f0; color: #18392B;">{{ m.tipo }}</span>
             </li>
-            <li class="list-group-item d-flex justify-content-between align-items-center py-3 bg-light">
-                <span class="text-muted fw-semibold"><i class="bi bi-boxes me-2"></i>Cantidad Movida:</span>
-                <span class="fw-bold fs-4 text-dark">{{ m.cantidad }} u.</span>
+            <li class="list-group-item d-flex justify-content-between align-items-center py-3 px-0 bg-light mt-2 rounded border-start border-4 border-success">
+                <span class="text-muted fw-bold ps-2"><i class="bi bi-boxes me-2"></i>Cantidad Movida:</span>
+                <span class="fw-bold fs-4 pe-2" style="color: #18392B;">{{ m.cantidad }} u.</span>
             </li>
-            <li class="list-group-item d-flex justify-content-between align-items-center py-3">
-                <span class="text-muted"><i class="bi bi-calendar-event me-2"></i>Fecha y Hora:</span>
-                <span class="fw-semibold text-secondary">{{ m.fecha }}</span>
-            </li>
-            <li class="list-group-item d-flex justify-content-between align-items-center py-3">
-                <span class="text-muted"><i class="bi bi-person-badge me-2"></i>Responsable:</span>
-                <span class="fw-bold text-dark">{{ m.responsable }}</span>
+            <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-0 mt-2">
+                <span class="text-muted"><i class="bi bi-person-badge me-2"></i>Registrado por (Responsable):</span>
+                <span class="fw-semibold text-dark">{{ m.responsable }}</span>
             </li>
         </ul>
 
+        <!-- Nota al pie informativa -->
+        <div class="text-center small text-muted mb-4 border-top pt-2">
+            <p class="mb-0">Documento generado para control de inventario y trazabilidad interna en El Salvador.</p>
+        </div>
+
+        <!-- Botones de Acción -->
         <div class="d-flex gap-2 no-print">
-            <button onclick="window.print()" class="btn btn-primary w-100 fw-bold py-2">
-                <i class="bi bi-printer-fill me-2"></i> Imprimir
+            <button onclick="window.print()" class="btn w-100 fw-bold py-2 text-white shadow-sm" style="background-color: #356859;">
+                <i class="bi bi-printer-fill me-2"></i> Imprimir Comprobante
             </button>
-            <button onclick="window.close()" class="btn btn-outline-secondary w-100 fw-bold py-2">
-                <i class="bi bi-x-circle me-2"></i> Cerrar Pestaña
-            </button>
+            <a href="{{ url_for('inventario.inventario') }}" class="btn w-100 fw-bold py-2 text-white shadow-sm" style="background-color: #6B7280;">
+                <i class="bi bi-house-door-fill me-2"></i> Volver al Inicio
+            </a>
         </div>
     </div>
 

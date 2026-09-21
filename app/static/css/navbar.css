@@ -1,42 +1,40 @@
-.btn-outline {
-  background-color: #1c36fb;
-  color: white;
-  border: none;
+/* Espacio en el cuerpo de la página para alojar el Sidebar fijo a la izquierda */
+body.bg-light {
+  padding-left: 260px; /* Ancho del sidebar */
 }
 
-.btn-outline:hover {
-  background-color: #1429c7;
-  color: white;
+/* Diseño del Sidebar */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 260px;
+  height: 100vh;
+  background-color: #18392B !important; /* Verde oscuro */
+  border-right: 3px solid #C47A3A;
+  z-index: 1040;
+  overflow-y: auto;
 }
 
-.usuario-panel {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: white;
+/* Estilos de los enlaces */
+.sidebar .nav-link {
+  color: #FFFFFF !important;
+  font-weight: 500;
+  border-radius: 8px;
+  padding-left: 15px;
+  transition: all 0.2s ease;
 }
 
-.usuario-panel i {
-  font-size: 2rem;
+/* Enlace Activo o al pasar el ratón */
+.sidebar .nav-link:hover, 
+.sidebar .nav-link.active {
+  background-color: #356859 !important; /* Verde medio */
+  color: #C47A3A !important; /* Ámbar/Cobre */
+  font-weight: 700;
 }
 
-.usuario-panel div div {
-  font-weight: 600;
-  line-height: 1.1;
-}
-
-.usuario-panel small {
-  color: #cfd3d7;
-}
-
-.btn-outline {
-  background: #1c36fb;
-  color: white;
-  border: 1px solid #1c36fb;
-}
-
-.btn-outline:hover {
-  background: #1429c7;
-  color: white;
-  border-color: #1429c7;
+/* Ajustes para teléfonos y tablets (oculta el sidebar y quita el margen) */
+@media (max-width: 991.98px) {
+  body.bg-light { padding-left: 0; }
+  .sidebar { border-right: none; }
 }

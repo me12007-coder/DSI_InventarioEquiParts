@@ -1,74 +1,247 @@
-/* Fondo principal */
-body {
-  background: linear-gradient(90deg, #133ea1, #1e3a8a);
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+/* =====================================================
+   LOGIN - EQUI-PARTS S&S
+   Paleta Verde Industrial + Cobre
+===================================================== */
+
+/* Página completa */
+body.login-page {
+    margin: 0;
+    padding: 0 !important;
+    min-height: 100vh;
+    background-color: #F3F5F2;
+    overflow: hidden;
 }
-/* Tarjeta principal */
-.card {
-  width: 420px;
-  border: none;
-  border-radius: 18px;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25);
-  overflow: hidden;
+
+
+/* =====================================================
+   LADO IZQUIERDO - IMAGEN
+===================================================== */
+
+.bg-login-image {
+    position: relative;
+    min-height: 100vh;
+
+    background-image: url("../archivos/Interfaz/Login.png");
+
+    background-size: cover;
+    background-position: left center;
+    background-repeat: no-repeat;
 }
+
+
+/* Texto encima de la imagen */
+.login-overlay {
+    position: absolute;
+    top: 50%;
+    left: 58%;
+    transform: translate(-50%, -50%);
+
+    width: 38%;
+    max-width: 430px;
+
+    z-index: 2;
+}
+
+.login-overlay h1 {
+    color: #FFFFFF !important;
+
+    font-size: 2.6rem;
+    font-weight: 700;
+    line-height: 1.15;
+
+    margin: 0;
+
+    text-shadow: 0 3px 12px rgba(0, 0, 0, 0.55);
+}
+
+
+/* Línea cobre debajo del título */
+.login-overlay h1::after {
+    content: "";
+    display: block;
+
+    width: 80px;
+    height: 5px;
+
+    margin-top: 25px;
+
+    background-color: #C47A3A;
+    border-radius: 10px;
+}
+
+
+/* =====================================================
+   LADO DERECHO
+===================================================== */
+
+.login-page .bg-fondo {
+    min-height: 100vh;
+    background-color: #F3F5F2;
+}
+
+
+/* =====================================================
+   TARJETA DEL LOGIN
+===================================================== */
+
+.login-page .card {
+    width: 28rem !important;
+
+    background-color: #FFFFFF !important;
+
+    border: none !important;
+    border-radius: 16px !important;
+
+    box-shadow:
+        0 20px 50px rgba(24, 57, 43, 0.16) !important;
+}
+
+
+/* =====================================================
+   LOGO
+===================================================== */
+
+.login-page .logo {
+    text-align: center;
+    font-size: 3.2rem;
+    color: #C47A3A;
+}
+
 
 /* Título */
-.card h3 {
-  font-weight: 700;
-  margin-bottom: 5px;
+.login-page h3 {
+    color: #202522 !important;
 }
 
-/* Subtítulo */
-.subtitulo {
-  color: #6c757d;
-  font-size: 14px;
-  text-align: center;
-  margin-bottom: 25px;
+
+/* =====================================================
+   FORMULARIO
+===================================================== */
+
+.login-page .form-label {
+    color: #202522 !important;
+    font-weight: 600;
 }
 
-/* Etiquetas */
-label {
-  font-weight: 600;
-  color: #495057;
-}
 
 /* Inputs */
-.form-control {
-  border-radius: 10px;
-  padding: 10px;
+.login-page .form-control {
+    height: 48px;
+
+    background-color: #F8FAF9 !important;
+
+    border: 1px solid #D1D5DB;
+    border-radius: 8px;
+
+    color: #202522;
 }
 
-/* Iconos */
-.input-group-text {
-  background-color: #f8f9fa;
-  border-radius: 10px 0 0 10px;
+
+/* Cuando seleccionamos un input */
+.login-page .form-control:focus {
+    border-color: #356859;
+
+    box-shadow:
+        0 0 0 0.2rem rgba(53, 104, 89, 0.15);
 }
 
-/* Botón login */
-.btn-primary {
-  border-radius: 10px;
-  padding: 10px;
-  font-weight: bold;
-  transition: 0.3s;
+
+/* Iconos de usuario y contraseña */
+.login-page .input-group-text {
+    min-width: 48px;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    background-color: #356859 !important;
+
+    color: #FFFFFF !important;
+
+    border: none;
 }
 
-.btn-primary:hover {
-  box-shadow: 0 0 15px rgba(9, 103, 246, 0.5);
-  transform: scale(1.01);
+
+/* =====================================================
+   BOTÓN MOSTRAR CONTRASEÑA
+===================================================== */
+
+.login-page .btn-outline-secondary {
+    border-color: #D1D5DB;
+
+    color: #6B7280;
 }
 
-/* Alertas */
-.alert {
-  border-radius: 10px;
+.login-page .btn-outline-secondary:hover {
+    background-color: #356859;
+
+    border-color: #356859;
+
+    color: #FFFFFF;
 }
 
-/* Logo */
-.logo {
-  font-size: 55px;
-  color: #0d6efd;
-  text-align: center;
-  margin-bottom: 10px;
+
+/* =====================================================
+   BOTÓN INICIAR SESIÓN
+===================================================== */
+
+.login-page .btn-primary {
+    min-height: 48px;
+
+    background-color: #18392B !important;
+
+    border-color: #18392B !important;
+
+    color: #FFFFFF !important;
+
+    border-radius: 8px !important;
+
+    font-weight: 700;
+
+    transition: 0.2s ease;
+}
+
+
+.login-page .btn-primary:hover {
+    background-color: #356859 !important;
+
+    border-color: #356859 !important;
+
+    transform: translateY(-1px);
+
+    box-shadow:
+        0 6px 15px rgba(24, 57, 43, 0.25);
+}
+
+
+/* =====================================================
+   MENSAJES / ALERTAS
+===================================================== */
+
+.login-page .alert {
+    border-radius: 8px;
+}
+
+
+/* =====================================================
+   RESPONSIVE
+   En celulares desaparece la imagen y queda el login
+===================================================== */
+
+@media (max-width: 991.98px) {
+
+    body.login-page {
+        overflow: auto;
+    }
+
+    .login-page .bg-fondo {
+        min-height: 100vh;
+        padding: 25px;
+    }
+
+    .login-page .card {
+        width: 100% !important;
+        max-width: 430px;
+        padding: 2rem !important;
+    }
 }
