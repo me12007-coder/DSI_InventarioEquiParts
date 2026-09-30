@@ -95,10 +95,14 @@ def editar_producto(id):
         cat_raw = data.get('categoria_id')
         categoria_id = int(cat_raw) if cat_raw else None
         
-        cursor.execute('''UPDATE productos SET nombre = %s, descripcion = %s, precio = %s, ubicacion = %s, categoria_id = %s, cantidad = %s
+        # Recuperamos el nuevo stock mínimo del formulario
+        stock_minimo = int(data.get('stock_minimo', 5))
+        
+        # Actualizamos la consulta para incluir stock_minimo
+        cursor.execute('''UPDATE productos SET nombre = %s, descripcion = %s, precio = %s, ubicacion = %s, categoria_id = %s, cantidad = %s, stock_minimo = %s
                         WHERE id = %s''', 
                      (str(data.get('nombre')), str(data.get('descripcion')), float(data.get('precio')), 
-                      str(data.get('ubicacion')), categoria_id, int(data.get('cantidad', 0)), id))
+                      str(data.get('ubicacion')), categoria_id, int(data.get('cantidad', 0)), stock_minimo, id))
         conn.commit()
         flash('Producto actualizado.', 'success')
         cursor.close()
@@ -351,7 +355,9 @@ def importar_csv():
                     precio = float(row[4]) if len(row) > 4 and row[4].replace('.', '', 1).isdigit() else 0.0
                     categoria_id = int(row[5]) if len(row) > 5 and row[5].isdigit() else None
                     ubicacion = str(row[6]).strip() if len(row) > 6 else "Bodega Central"
-                    stock_minimo = 5 # Valor por defecto masivo
+                    
+                    # LEE LA COLUMNA 8 (índice 7) PARA EL STOCK MÍNIMO. Si no hay dato, usa 5.
+                    stock_minimo = int(row[7]) if len(row) > 7 and row[7].isdigit() else 5
 
                     try:
                         cursor.execute('''INSERT INTO productos (sku, nombre, descripcion, cantidad, stock_minimo, precio, categoria_id, ubicacion, activo)
@@ -381,6 +387,21 @@ def importar_csv():
         flash('Formato no válido. Suba un archivo .csv', 'danger')
 
     return redirect(url_for('inventario.inventario'))
+
+@inventario_bp.route('/descargar_plantilla_csv')
+def descargar_plantilla_csv():
+    # Protección: solo Admin o Bodeguero
+    if 'user_id' not in session or session.get('rol') not in ['Administrador', 'Bodeguero']:
+        return redirect(url_for('inventario.inventario'))
+    
+    # Cabeceras exactas que espera tu función importar_csv, incluyendo stock_minimo
+    csv_content = "sku,nombre,descripcion,cantidad,precio,categoria_id,ubicacion,stock_minimo\n"
+    csv_content += "EX-001,Ejemplo de Repuesto,Descripción breve,10,150.50,1,Estante A-1,3\n"
+    return Response(
+        csv_content,
+        mimetype="text/csv",
+        headers={"Content-disposition": "attachment; filename=plantilla_importacion.csv"}
+    )
 
 @inventario_bp.route('/api/productos/filtrar', methods=['GET'])
 def api_filtrar_productos():

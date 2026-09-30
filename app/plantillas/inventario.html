@@ -211,6 +211,7 @@
     </div>
 
     <!-- Modal Importar CSV -->
+<!-- Modal Importar CSV -->
     <div class="modal fade" id="modalImportarCSV" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog">
         <div class="modal-content border-0">
@@ -222,8 +223,18 @@
             <i class="bi bi-cloud-upload display-1 text-muted mb-3 d-block"></i>
             <form action="{{ url_for('inventario.importar_csv') }}" method="POST" enctype="multipart/form-data">
               <input class="form-control mb-3" type="file" name="archivo_csv" accept=".csv" required />
-              <button type="submit" class="btn btn-success w-100"><i class="bi bi-upload me-1"></i> Cargar Masivamente</button>
+              <button type="submit" class="btn btn-success w-100 mb-2">
+                <i class="bi bi-upload me-1"></i> Cargar Masivamente
+              </button>
             </form>
+            
+            <!-- NUEVO BOTÓN DE DESCARGA -->
+            <hr class="my-3 text-muted">
+            <p class="small text-muted mb-2">¿No tienes el formato correcto?</p>
+            <a href="{{ url_for('inventario.descargar_plantilla_csv') }}" class="btn btn-outline-secondary w-100 fw-bold shadow-sm">
+              <i class="bi bi-download me-1"></i> Descargar Plantilla de Ejemplo
+            </a>
+
           </div>
         </div>
       </div>

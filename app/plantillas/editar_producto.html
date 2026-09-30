@@ -5,33 +5,32 @@
     <title>Editar {{ p.sku }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
-
     <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}" />
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/inventario.css') }}" /></head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/inventario.css') }}" />
 </head>
-    <body class="bg-light">
+<body class="bg-light">
     {% include 'includes/navbar.html' %}
-    <div class="container mt-5 mb-5">
-        <div class="card shadow mx-auto" style="max-width: 700px;">
-            <div class="card-header bg-warning text-dark fw-semibold">
+    
+    <div class="container mt-4 mb-5">
+        <div class="card shadow-sm mx-auto border-0 rounded-3" style="max-width: 750px;">
+            <div class="card-header fw-semibold">
                 <i class="bi bi-pencil-square me-2"></i>
-                Editar Producto 
+                Editar Ficha del Producto 
             </div>
-            <div class="card-body">
-                <div class="mb-4">
-                    <h4 class="fw-bold mb-1">{{ p.nombre }}</h4>
-                    <span class="badge bg-secondary">
+            <div class="card-body p-4">
+                <div class="mb-4 border-bottom pb-3">
+                    <h4 class="fw-bold mb-1" style="color: #18392B;">{{ p.nombre }}</h4>
+                    <span class="badge bg-dark mt-1">
                         SKU: {{ p.sku }}
                     </span>
-                    <p class="text-muted mt-2 mb-0">
-                        Actualice la información general del producto registrado en el inventario.
+                    <p class="text-muted mt-2 mb-0 small">
+                        Modifique la información general, existencias y alertas del producto.
                     </p>
                 </div>
+                
                 <form method="POST">
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">
-                            Nombre del Repuesto
-                        </label>
+                        <label class="form-label fw-semibold">Nombre del Repuesto</label>
                         <div class="input-group">
                             <span class="input-group-text">
                                 <i class="bi bi-box-seam"></i>
@@ -39,49 +38,61 @@
                             <input type="text" name="nombre" class="form-control" value="{{ p.nombre }}" required>
                         </div>
                     </div>
-                    <div class="mb-3">
+                    
+                    <div class="mb-4">
                         <label class="form-label fw-semibold">Descripción / Especificaciones</label>
                         <textarea name="descripcion" class="form-control" rows="3">{{ p.descripcion }}</textarea>
                     </div>
-                    <div class="row mb-3">
-                        <div class="col-6">
-                            <label class="form-label fw-semibold">Stock Físico</label>
-                            <input type="number" name="cantidad" class="form-control" value="{{ p.cantidad }}" min="0" required>
+
+                    <h6 class="seccion-formulario mt-0">Inventario y Finanzas</h6>
+                    <div class="row mb-4">
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <label class="form-label fw-semibold small text-muted text-uppercase">Stock Físico</label>
+                            <input type="number" name="cantidad" class="form-control fw-bold fs-5" style="color: #18392B;" value="{{ p.cantidad }}" min="0" required>
                         </div>
-                        <div class="col-6">
-                            <label class="form-label fw-semibold">Precio Unitario ($)</label>
-                            <input type="number" name="precio" class="form-control" value="{{ p.precio }}" step="0.01" min="0.01" required>
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <label class="form-label fw-semibold small text-muted text-uppercase">Alerta Mínima <i class="bi bi-info-circle ms-1" title="El sistema alertará cuando llegue a este nivel"></i></label>
+                            <input type="number" name="stock_minimo" class="form-control fw-bold fs-5" style="color: #C47A3A;" value="{{ p.stock_minimo }}" min="1" required>
                         </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Ubicación en Bodega</label>
-                        <div class="input-group">
-                            <span class="input-group-text">
-                                <i class="bi bi-geo-alt"></i>
-                            </span>
-                            <input type="text" name="ubicacion" class="form-control" value="{{ p.ubicacion }}">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold small text-muted text-uppercase">Precio Unitario ($)</label>
+                            <input type="number" name="precio" class="form-control fw-bold fs-5" style="color: #356859;" value="{{ p.precio }}" step="0.01" min="0.01" required>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Categoría</label>
-                        <div class="input-group">
-                            <span class="input-group-text">
-                                <i class="bi bi-tags"></i>
-                            </span>
-                            <select name="categoria_id" class="form-select">
-                                <option value="">Sin categoría</option>
-                                    {% for c in categorias %}
-                                    <option value="{{ c.id }}" {% if p.categoria_id == c.id %}selected{% endif %}>{{ c.nombre }}</option>
-                                    {% endfor %}
-                            </select>
+
+                    <h6 class="seccion-formulario mt-0">Clasificación y Ubicación</h6>
+                    <div class="row mb-4">
+                        <div class="col-md-6 mb-3 mb-md-0">
+                            <label class="form-label fw-semibold">Ubicación en Bodega</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="bi bi-geo-alt"></i>
+                                </span>
+                                <input type="text" name="ubicacion" class="form-control" value="{{ p.ubicacion }}">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Categoría</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="bi bi-tags"></i>
+                                </span>
+                                <select name="categoria_id" class="form-select">
+                                    <option value="">Sin categoría</option>
+                                        {% for c in categorias %}
+                                        <option value="{{ c.id }}" {% if p.categoria_id == c.id %}selected{% endif %}>{{ c.nombre }}</option>
+                                        {% endfor %}
+                                </select>
+                            </div>
                         </div>
                     </div>
-                    <div class="d-flex justify-content-end gap-2 mt-4">
-                        <a href="{{ url_for('inventario.inventario') }}" class="btn btn-secondary">
+                    
+                    <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                        <a href="{{ url_for('inventario.inventario') }}" class="btn btn-secondary px-4">
                             <i class="bi bi-arrow-left me-1"></i>
                             Cancelar
                         </a>
-                        <button type="submit" class="btn btn-success">
+                        <button type="submit" class="btn btn-success px-4">
                             <i class="bi bi-check-circle me-1"></i>
                             Guardar Cambios
                         </button>
