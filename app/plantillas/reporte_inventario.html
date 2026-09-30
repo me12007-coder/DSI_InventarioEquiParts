@@ -2,104 +2,114 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Reporte de Inventario</title>
+    <title>Centro de Reportes - Equi-Parts</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/inventario.css') }}" />
 </head>
 <body class="bg-light">
     {% include 'includes/navbar.html' %}
     
-    <div class="container mt-4 mb-5">
-             <div class="d-flex justify-content-between mb-3 no-print">
-                    <a href="{{ url_for('inventario.inventario') }}" class="btn btn-secondary">← Volver</a>
-                    <div class="d-flex gap-2">
-                        <a href="{{ url_for('reportes.exportar_reporte_csv') }}" class="btn btn-success fw-bold">
-                            <i class="bi bi-file-earmark-excel-fill"></i> Descargar CSV
-                        </a>
-                        <button onclick="descargarPDF()" class="btn btn-danger fw-bold">
-                            <i class="bi bi-file-earmark-pdf-fill"></i> Descargar PDF
-                        </button>
-                    </div>
-            </div>
+    <div class="container-fluid px-4 py-4 mt-3">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="fw-bold" style="color: #18392B;"><i class="bi bi-bar-chart-fill me-2" style="color: #C47A3A;"></i>Centro de Reportes Gerenciales</h2>
+        </div>
 
-        <div class="card shadow border-0" id="documento-pdf" style="padding: 40px; background: white;">
-            <div class="text-center mb-4 border-bottom pb-3">
-                <h2 class="fw-bold">Equi-Parts S&S</h2>
-                <h5 class="text-muted">Reporte Gerencial de Estado de Inventario</h5>
-                <small>Generado por: {{ username }}</small>
-            </div>
-
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="p-3 bg-light rounded border text-center">
-                        <h6 class="text-muted mb-1">Valorización Total del Inventario Físico</h6>
-                        <h2 class="text-success fw-bold m-0">${{ "%.2f"|format(valor_total) }}</h2>
+        <!-- Tarjetas de Acceso a Reportes -->
+        <div class="row mb-5 g-4">
+            <!-- HU-24: Reporte Histórico -->
+            <div class="col-md-4">
+                <div class="card shadow-sm border-0 h-100" style="border-top: 4px solid #356859 !important;">
+                    <div class="card-body">
+                        <h5 class="fw-bold"><i class="bi bi-clock-history me-2 text-muted"></i>Inventario Histórico</h5>
+                        <p class="text-muted small mb-3">Consulta el stock exacto que había en una fecha pasada.</p>
+                        <form action="{{ url_for('reportes.reporte_historico') }}" method="POST">
+                            <div class="input-group mb-2">
+                                <span class="input-group-text"><i class="bi bi-calendar-event"></i></span>
+                                <input type="date" name="fecha_limite" class="form-control" required max="{{ now }}">
+                            </div>
+                            <button type="submit" class="btn w-100 fw-bold text-white shadow-sm" style="background-color: #356859;">Generar Reporte</button>
+                        </form>
                     </div>
                 </div>
             </div>
 
-            <h5 class="fw-bold text-danger mt-4 border-bottom pb-2">Repuestos en Nivel Crítico (Requieren Abastecimiento)</h5>
-            <table class="table table-sm mt-3 align-middle">
-                <thead class="table-dark">
-                    <tr>
-                        <th>SKU</th>
-                        <th>Repuesto</th>
-                        <th class="text-center">Estado</th>
-                        <th class="text-center">Stock Real</th>
-                        <th class="text-center">Mínimo Permitido</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for c in criticos %}
-                    {% set stock_real = c.cantidad - c.stock_reservado %}
-                    <tr>
-                        <td>{{ c.sku }}</td>
-                        <td>{{ c.nombre }}</td>
-                        <td class="text-center">
-                            {% if stock_real <= 0 %}
-                                <span class="badge bg-danger">Agotado (Crítico)</span>
+            <!-- HU-25: Flujo de Entradas y Salidas -->
+            <div class="col-md-4">
+                <div class="card shadow-sm border-0 h-100" style="border-top: 4px solid #C47A3A !important;">
+                    <div class="card-body">
+                        <h5 class="fw-bold"><i class="bi bi-arrow-left-right me-2 text-muted"></i>Entradas y Salidas</h5>
+                        <p class="text-muted small mb-3">Analiza el flujo de movimientos por rangos de fecha.</p>
+                        <a href="{{ url_for('reportes.flujo_movimientos') }}" class="btn w-100 fw-bold text-white shadow-sm mt-4" style="background-color: #C47A3A;">
+                            <i class="bi bi-funnel-fill me-1"></i> Ir al Panel de Flujos
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Valorización Actual (Existente) -->
+            <div class="col-md-4">
+                <div class="card shadow-sm border-0 h-100 bg-white">
+                    <div class="card-body text-center d-flex flex-column justify-content-center">
+                        <h6 class="text-muted text-uppercase fw-bold mb-1">Valorización Total (Físico)</h6>
+                        <h2 class="display-5 fw-bold mb-0" style="color: #18392B;">${{ "%.2f"|format(valor_total) }}</h2>
+                        <span class="badge bg-success mt-2 mx-auto">Actualizado en tiempo real</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reporte de Stock Crítico (Existente adaptado) -->
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold m-0" style="color: #DE3B40;"><i class="bi bi-exclamation-triangle-fill me-2"></i>Repuestos en Nivel Crítico (Requieren Abastecimiento)</h5>
+                <a href="{{ url_for('reportes.exportar_reporte_csv') }}" class="btn btn-sm text-white" style="background-color: #18392B;">
+                    <i class="bi bi-filetype-csv me-1"></i> Descargar CSV
+                </a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead style="background-color: #18392B; color: white;">
+                            <tr>
+                                <th class="ps-4">SKU</th>
+                                <th>Repuesto</th>
+                                <th class="text-center">Estado</th>
+                                <th class="text-center">Stock Real</th>
+                                <th class="text-center">Mínimo Permitido</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if criticos %}
+                                {% for c in criticos %}
+                                <tr>
+                                    <td class="ps-4 fw-semibold text-muted">{{ c.sku }}</td>
+                                    <td class="fw-bold">{{ c.nombre }}</td>
+                                    <td class="text-center">
+                                        {% if (c.cantidad - c.stock_reservado) <= 0 %}
+                                            <span class="badge bg-danger rounded-pill px-3">Agotado</span>
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark rounded-pill px-3">Por Agotarse</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center fs-5 fw-bold text-dark">{{ c.cantidad - c.stock_reservado }}</td>
+                                    <td class="text-center text-muted">{{ c.stock_minimo }}</td>
+                                </tr>
+                                {% endfor %}
                             {% else %}
-                                <span class="badge bg-warning text-dark">Por Agotarse</span>
+                                <tr>
+                                    <td colspan="5" class="text-center py-5 text-success fw-bold">
+                                        <i class="bi bi-check-circle-fill fs-4 d-block mb-2"></i> El inventario está sano. No hay repuestos en nivel crítico.
+                                    </td>
+                                </tr>
                             {% endif %}
-                        </td>
-                        <td class="text-center fw-bold {% if stock_real <= 0 %}text-danger{% else %}text-warning{% endif %}">
-                            {{ stock_real }}
-                        </td>
-                        <td class="text-center text-muted">{{ c.stock_minimo }}</td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="5" class="text-center py-4 text-success fw-bold">
-                            <i class="bi bi-check-circle-fill me-2"></i> El inventario está sano. No hay repuestos en nivel crítico.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            
-            <div class="mt-5 text-center text-muted" style="font-size: 0.8em;">
-                Documento generado automáticamente por el Sistema de Control Equi-Parts S&S.
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
-
-    <script>
-        function descargarPDF() {
-            const elemento = document.getElementById('documento-pdf');
-            const opciones = {
-                margin:       1,
-                filename:     'Reporte_Inventario_EquiParts.pdf',
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2 },
-                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
-            };
-            
-            // Genera y descarga el PDF
-            html2pdf().set(opciones).from(elemento).save();
-        }
-    </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

@@ -6,11 +6,9 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     
-    <!-- ENLACES A TUS ESTILOS PERSONALIZADOS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/inventario.css') }}" />
     
-    <!-- MAGIA PARA EL PDF -->
     <style>
         @media print {
             body { background-color: white !important; }
@@ -18,6 +16,7 @@
             .card { border: none !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important; }
             .container { max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
             .table { color: black !important; border-color: #dee2e6 !important; }
+            .table thead th { background-color: white !important; color: black !important; border-bottom: 2px solid black !important; }
             .encabezado-impresion { display: block !important; text-align: center; margin-bottom: 20px; }
         }
         .encabezado-impresion { display: none; }
@@ -27,9 +26,13 @@
     {% include 'includes/navbar.html' %}
     
     <div class="container mt-4 mb-5">
-        <div class="card shadow border-0 p-4">
+        
+        <div class="mb-3 esconder-impresion">
+            <a href="{{ url_for('reportes.generar_reporte') }}" class="btn btn-sm btn-secondary"><i class="bi bi-arrow-left"></i> Volver al Dashboard</a>
+        </div>
+
+        <div class="card shadow-sm border-0 p-4 rounded-3">
             
-            <!-- Encabezado exclusivo para el PDF -->
             <div class="encabezado-impresion">
                 <h2>Equi-Parts S&S</h2>
                 <h4>Reporte Histórico de Inventario</h4>
@@ -37,17 +40,18 @@
                 <hr>
             </div>
 
-            <h3 class="fw-bold mb-1 esconder-impresion"><i class="bi bi-clock-history me-2 text-info"></i> Reporte de Inventario a Fecha de Corte</h3>
+            <h3 class="fw-bold mb-1 esconder-impresion" style="color: #18392B;">
+                <i class="bi bi-clock-history me-2" style="color: #C47A3A;"></i> Reporte de Inventario a Fecha de Corte
+            </h3>
             <p class="text-muted mb-4 esconder-impresion">Calcula el stock existente (reconstrucción matemática) hasta el final del día seleccionado.</p>
             
-            <!-- Buscador de Fecha -->
-            <form method="POST" class="row g-3 align-items-end bg-light p-3 rounded border mb-4">
+            <form method="POST" class="row g-3 align-items-end bg-white p-3 rounded border mb-4 esconder-impresion shadow-sm">
                 <div class="col-md-4">
-                    <label class="form-label fw-bold small text-secondary">Seleccione la Fecha Límite</label>
+                    <label class="form-label fw-bold small text-muted text-uppercase">Seleccione la Fecha Límite</label>
                     <input type="date" name="fecha_limite" class="form-control" required value="{{ fecha_consulta }}">
                 </div>
                 <div class="col-md-3">
-                    <button type="submit" class="btn btn-primary w-100 fw-bold">
+                    <button type="submit" class="btn w-100 fw-bold text-white" style="background-color: #356859;">
                         <i class="bi bi-search me-1"></i> Generar Reporte
                     </button>
                 </div>
@@ -55,22 +59,21 @@
 
             {% if fecha_consulta %}
             <div class="d-flex justify-content-between align-items-center mb-3 esconder-impresion">
-                <h5 class="fw-bold text-success m-0">Estado del Inventario al {{ fecha_consulta }}</h5>
+                <h5 class="fw-bold m-0" style="color: #18392B;">Estado del Inventario al <span style="color: #C47A3A;">{{ fecha_consulta }}</span></h5>
                 
-                <!-- BOTONES DE EXPORTACIÓN -->
                 <div class="d-flex gap-2">
-                    <a href="{{ url_for('reportes.exportar_historico_csv', fecha=fecha_consulta) }}" class="btn btn-success btn-sm fw-bold">
+                    <a href="{{ url_for('reportes.exportar_historico_csv', fecha=fecha_consulta) }}" class="btn text-white btn-sm fw-bold shadow-sm" style="background-color: #356859;">
                         <i class="bi bi-file-earmark-excel-fill"></i> Descargar CSV
                     </a>
-                    <button onclick="window.print()" class="btn btn-danger btn-sm fw-bold">
+                    <button onclick="window.print()" class="btn btn-sm fw-bold text-white shadow-sm" style="background-color: #DE3B40;">
                         <i class="bi bi-printer-fill"></i> Imprimir a PDF
                     </button>
                 </div>
             </div>
             
             <div class="table-responsive">
-                <table class="table table-striped table-bordered align-middle">
-                    <thead class="table-dark text-center">
+                <table class="table table-hover table-bordered align-middle mb-0">
+                    <thead style="background-color: #18392B; color: white;" class="text-center">
                         <tr>
                             <th>Código (SKU)</th>
                             <th>Nombre del Repuesto</th>
@@ -81,11 +84,10 @@
                     <tbody>
                         {% for p in productos %}
                         <tr>
-                            <td class="text-center fw-bold">{{ p.sku }}</td>
-                            <td>{{ p.nombre }}</td>
-                            <!-- Le quité la clase text-muted para que se lea mejor al imprimir -->
-                            <td class="small">{{ p.descripcion or 'Sin descripción' }}</td>
-                            <td class="text-center fs-5 fw-bold text-primary">{{ p.cantidad_historica }}</td>
+                            <td class="text-center fw-semibold text-muted">{{ p.sku }}</td>
+                            <td class="fw-bold">{{ p.nombre }}</td>
+                            <td class="small text-muted">{{ p.descripcion or 'Sin descripción' }}</td>
+                            <td class="text-center fs-5 fw-bold" style="color: #18392B;">{{ p.cantidad_historica }}</td>
                         </tr>
                         {% else %}
                         <tr>
