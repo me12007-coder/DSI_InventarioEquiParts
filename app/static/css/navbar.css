@@ -1,6 +1,6 @@
 /* Espacio en el cuerpo de la página para alojar el Sidebar fijo a la izquierda */
 body.bg-light {
-  padding-left: 260px; /* Ancho del sidebar */
+  padding-left: 260px;
 }
 
 /* Diseño del Sidebar */
@@ -10,9 +10,9 @@ body.bg-light {
   left: 0;
   width: 260px;
   height: 100vh;
-  background-color: #18392B !important; /* Verde oscuro */
+  background-color: #18392B !important; 
   border-right: 3px solid #C47A3A;
-  z-index: 1040;
+  z-index: 1045 !important; /* Solución: 1045 asegura que esté sobre el fondo oscuro (1040) */
   overflow-y: auto;
 }
 
@@ -28,12 +28,12 @@ body.bg-light {
 /* Enlace Activo o al pasar el ratón */
 .sidebar .nav-link:hover, 
 .sidebar .nav-link.active {
-  background-color: #356859 !important; /* Verde medio */
-  color: #C47A3A !important; /* Ámbar/Cobre */
+  background-color: #356859 !important; 
+  color: #C47A3A !important; 
   font-weight: 700;
 }
 
-/* Ajustes para teléfonos y tablets (oculta el sidebar y quita el margen) */
+/* Ajustes para teléfonos y tablets */
 @media (max-width: 991.98px) {
   body.bg-light { padding-left: 0; }
   .sidebar { border-right: none; }
