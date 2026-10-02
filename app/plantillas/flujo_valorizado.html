@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Flujo Valorizado - Equi-Parts</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}" />
+    <style>
+        @media print {
+            body { background-color: white !important; }
+            .navbar, form, .btn, .esconder-impresion { display: none !important; }
+            .card { border: none !important; box-shadow: none !important; }
+            .table { color: black !important; border-color: #dee2e6 !important; }
+            .table thead th { background-color: white !important; color: black !important; border-bottom: 2px solid black !important; }
+            .encabezado-impresion { display: block !important; text-align: center; margin-bottom: 20px; }
+        }
+        .encabezado-impresion { display: none; }
+    </style>
+</head>
+<body class="bg-light">
+    {% include 'includes/navbar.html' %}
+    
+    <div class="container-fluid px-4 mt-4 mb-5">
+        <div class="mb-3 esconder-impresion">
+            <a href="{{ url_for('reportes.generar_reporte') }}" class="btn btn-sm btn-secondary"><i class="bi bi-arrow-left"></i> Volver al Dashboard</a>
+        </div>
+
+        <div class="card shadow-sm border-0 p-4 rounded-3">
+            <div class="encabezado-impresion">
+                <h2>Equi-Parts S&S</h2>
+                <h4>Reporte de Flujo Valorizado (Dinero)</h4>
+                <p>Generado por: {{ username }} | Filtros: {{ tipo_filtro }} ({{ fecha_inicio or 'Inicio' }} - {{ fecha_fin or 'Hoy' }})</p>
+                <hr>
+            </div>
+
+            <h3 class="fw-bold mb-4 esconder-impresion" style="color: #18392B;">
+                <i class="bi bi-currency-dollar me-2" style="color: #18392B;"></i> Flujo de Movimientos Valorizado
+            </h3>
+            
+            <form method="GET" class="row g-3 bg-white p-3 rounded border mb-4 esconder-impresion shadow-sm">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold small text-muted">Fecha Inicio</label>
+                    <input type="date" name="fecha_inicio" class="form-control" value="{{ fecha_inicio }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold small text-muted">Fecha Fin</label>
+                    <input type="date" name="fecha_fin" class="form-control" value="{{ fecha_fin }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-bold small text-muted">Tipo de Movimiento</label>
+                    <select name="tipo_filtro" class="form-select">
+                        <option value="Todos" {% if tipo_filtro == 'Todos' %}selected{% endif %}>Todos</option>
+                        <option value="Entradas" {% if tipo_filtro == 'Entradas' %}selected{% endif %}>Solo Entradas</option>
+                        <option value="Salidas" {% if tipo_filtro == 'Salidas' %}selected{% endif %}>Solo Salidas</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex gap-2 align-items-end">
+                    <button type="submit" class="btn w-100 fw-bold text-white shadow-sm" style="background-color: #18392B;"><i class="bi bi-funnel-fill"></i></button>
+                    <a href="{{ url_for('reportes.flujo_valorizado') }}" class="btn btn-secondary shadow-sm"><i class="bi bi-eraser-fill"></i></a>
+                </div>
+            </form>
+
+            <div class="d-flex justify-content-between align-items-center mb-3 esconder-impresion">
+                <h5 class="fw-bold m-0" style="color: #18392B;">Registros: <span class="badge" style="background-color: #C47A3A;">{{ movimientos|length }}</span></h5>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('reportes.exportar_flujo_valorizado_csv', fecha_inicio=fecha_inicio, fecha_fin=fecha_fin, tipo_filtro=tipo_filtro) }}" class="btn text-white btn-sm fw-bold shadow-sm" style="background-color: #356859;">CSV</a>
+                    <button onclick="window.print()" class="btn text-white btn-sm fw-bold shadow-sm" style="background-color: #DE3B40;">PDF</button>
+                </div>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered align-middle mb-0" style="font-size: 0.9rem;">
+                    <thead style="background-color: #18392B; color: white;" class="text-center">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>SKU</th>
+                            <th>Repuesto</th>
+                            <th>Operación</th>
+                            <th>Cant.</th>
+                            <th>Precio Unit.</th>
+                            <th style="background-color: #0f241b;">Valor Total</th>
+                            <th>Responsable</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for m in movimientos %}
+                        <tr>
+                            <td class="text-center">{{ m.fecha.strftime('%Y-%m-%d %H:%M') if m.fecha else m.fecha }}</td>
+                            <td class="text-center fw-semibold">{{ m.sku }}</td>
+                            <td class="fw-bold">{{ m.nombre }}</td>
+                            <td class="text-center">{{ m.tipo }}</td>
+                            <td class="text-center fw-bold">{{ m.cantidad }}</td>
+                            <td class="text-center text-muted">${{ "%.2f"|format(m.precio) }}</td>
+                            <td class="text-center fw-bold text-success">${{ "%.2f"|format(m.total_movimiento) }}</td>
+                            <td class="text-center"><i class="bi bi-person-fill"></i> {{ m.responsable }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

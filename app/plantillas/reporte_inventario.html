@@ -16,45 +16,60 @@
             <h2 class="fw-bold" style="color: #18392B;"><i class="bi bi-bar-chart-fill me-2" style="color: #C47A3A;"></i>Centro de Reportes Gerenciales</h2>
         </div>
 
-        <!-- Tarjetas de Acceso a Reportes -->
-        <div class="row mb-5 g-4">
-            <!-- HU-24: Reporte Histórico -->
-            <div class="col-md-4">
+        <!-- Tarjetas de Acceso a Reportes (4 Columnas) -->
+        <div class="row mb-5 g-3">
+            <!-- 1. Reporte Histórico -->
+            <div class="col-md-6 col-xl-3">
                 <div class="card shadow-sm border-0 h-100" style="border-top: 4px solid #356859 !important;">
-                    <div class="card-body">
-                        <h5 class="fw-bold"><i class="bi bi-clock-history me-2 text-muted"></i>Inventario Histórico</h5>
-                        <p class="text-muted small mb-3">Consulta el stock exacto que había en una fecha pasada.</p>
-                        <form action="{{ url_for('reportes.reporte_historico') }}" method="POST">
-                            <div class="input-group mb-2">
+                    <div class="card-body d-flex flex-column">
+                        <h6 class="fw-bold text-dark"><i class="bi bi-clock-history me-2 text-muted"></i>Inventario Histórico</h6>
+                        <p class="text-muted small mb-3">Reconstrucción del stock físico en una fecha pasada.</p>
+                        <form action="{{ url_for('reportes.reporte_historico') }}" method="POST" class="mt-auto">
+                            <div class="input-group input-group-sm mb-2">
                                 <span class="input-group-text"><i class="bi bi-calendar-event"></i></span>
-                                <input type="date" name="fecha_limite" class="form-control" required max="{{ now }}">
+                                <input type="date" name="fecha_limite" class="form-control" required>
                             </div>
-                            <button type="submit" class="btn w-100 fw-bold text-white shadow-sm" style="background-color: #356859;">Generar Reporte</button>
+                            <button type="submit" class="btn btn-sm w-100 fw-bold text-white" style="background-color: #356859;">Generar Reporte</button>
                         </form>
                     </div>
                 </div>
             </div>
 
-            <!-- HU-25: Flujo de Entradas y Salidas -->
-            <div class="col-md-4">
+            <!-- 2. Flujo Físico (Entradas y Salidas) -->
+            <div class="col-md-6 col-xl-3">
                 <div class="card shadow-sm border-0 h-100" style="border-top: 4px solid #C47A3A !important;">
-                    <div class="card-body">
-                        <h5 class="fw-bold"><i class="bi bi-arrow-left-right me-2 text-muted"></i>Entradas y Salidas</h5>
-                        <p class="text-muted small mb-3">Analiza el flujo de movimientos por rangos de fecha.</p>
-                        <a href="{{ url_for('reportes.flujo_movimientos') }}" class="btn w-100 fw-bold text-white shadow-sm mt-4" style="background-color: #C47A3A;">
-                            <i class="bi bi-funnel-fill me-1"></i> Ir al Panel de Flujos
+                    <div class="card-body d-flex flex-column">
+                        <h6 class="fw-bold text-dark"><i class="bi bi-arrow-left-right me-2 text-muted"></i>Flujo de Movimientos</h6>
+                        <p class="text-muted small mb-3">Analiza las cantidades físicas de entradas y salidas.</p>
+                        <a href="{{ url_for('reportes.flujo_movimientos') }}" class="btn btn-sm w-100 fw-bold text-white mt-auto" style="background-color: #C47A3A;">
+                            <i class="bi bi-box-seam me-1"></i> Ver Flujo Físico
                         </a>
                     </div>
                 </div>
             </div>
 
-            <!-- Valorización Actual (Existente) -->
-            <div class="col-md-4">
-                <div class="card shadow-sm border-0 h-100 bg-white">
+            <!-- 3. Flujo Valorizado (Movimientos en Dinero) -->
+            <div class="col-md-6 col-xl-3">
+                <div class="card shadow-sm border-0 h-100" style="border-top: 4px solid #18392B !important;">
+                    <div class="card-body d-flex flex-column">
+                        <h6 class="fw-bold text-dark"><i class="bi bi-currency-dollar me-2 text-muted"></i>Flujo Valorizado</h6>
+                        <p class="text-muted small mb-3">Audita cada movimiento físico expresado en montos de dinero.</p>
+                        <a href="{{ url_for('reportes.flujo_valorizado') }}" class="btn btn-sm w-100 fw-bold text-white mt-auto" style="background-color: #18392B;">
+                            <i class="bi bi-table me-1"></i> Ver Flujo Valorizado
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Estado Financiero (Resumen) -->
+            <div class="col-md-6 col-xl-3">
+                <div class="card shadow-sm border-0 h-100 bg-white" style="border-top: 4px solid #6c757d !important;">
                     <div class="card-body text-center d-flex flex-column justify-content-center">
-                        <h6 class="text-muted text-uppercase fw-bold mb-1">Valorización Total (Físico)</h6>
-                        <h2 class="display-5 fw-bold mb-0" style="color: #18392B;">${{ "%.2f"|format(valor_total) }}</h2>
-                        <span class="badge bg-success mt-2 mx-auto">Actualizado en tiempo real</span>
+                        <h6 class="text-muted text-uppercase fw-bold mb-1" style="font-size: 0.8rem;">Estado Financiero Global</h6>
+                        <h3 class="fw-bold mb-2" style="color: #18392B;">${{ "%.2f"|format(valor_total) }}</h3>
+                        <a href="{{ url_for('reportes.estado_financiero') }}" class="btn btn-sm btn-outline-secondary w-100 mt-auto fw-bold">
+                            <i class="bi bi-pie-chart-fill me-1"></i> Ver Desglose
+                        </a>
                     </div>
                 </div>
             </div>

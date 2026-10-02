@@ -295,3 +295,164 @@ def exportar_flujo_csv():
         
     output = si.getvalue()
     return Response(output, mimetype="text/csv", headers={"Content-Disposition": f"attachment;filename=Flujo_Movimientos_{tipo_filtro}.csv"})
+
+####################################
+# --- NUEVO CÓDIGO: FLUJO VALORIZADO (MOVIMIENTOS CON DINERO) ---
+@reportes_bp.route('/flujo_valorizado', methods=['GET'])
+def flujo_valorizado():
+    if 'user_id' not in session or session.get('rol') != 'Administrador': 
+        return redirect(url_for('inventario.inventario'))
+    
+    fecha_inicio = request.args.get('fecha_inicio', '')
+    fecha_fin = request.args.get('fecha_fin', '')
+    tipo_filtro = request.args.get('tipo_filtro', 'Todos')
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    query = '''SELECT m.id, p.sku, p.nombre, m.tipo, m.fecha, m.cantidad, p.precio, 
+                      (m.cantidad * p.precio) as total_movimiento, u.username as responsable
+               FROM movimientos m
+               LEFT JOIN productos p ON m.producto_id = p.id
+               LEFT JOIN usuarios u ON m.usuario_id = u.id
+               WHERE 1=1'''
+    params = []
+    
+    if fecha_inicio:
+        query += ' AND m.fecha >= %s'
+        params.append(f"{fecha_inicio} 00:00:00")
+    if fecha_fin:
+        query += ' AND m.fecha <= %s'
+        params.append(f"{fecha_fin} 23:59:59")
+    if tipo_filtro == 'Entradas':
+        query += " AND (m.tipo = 'Entrada' OR m.tipo LIKE 'Devolución%%' OR m.tipo = 'Creación de Producto')"
+    elif tipo_filtro == 'Salidas':
+        query += " AND (m.tipo IN ('Salida', 'Venta_Cotizacion', 'Eliminación de Producto'))"
+    elif tipo_filtro == 'Ajustes':
+        query += " AND m.tipo LIKE 'Ajuste%%'"
+        
+    query += ' ORDER BY m.fecha DESC'
+    cursor.execute(query, params)
+    movimientos = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    return render_template('flujo_valorizado.html', 
+                           movimientos=movimientos, 
+                           fecha_inicio=fecha_inicio, 
+                           fecha_fin=fecha_fin, 
+                           tipo_filtro=tipo_filtro,
+                           username=session.get('username'))
+
+@reportes_bp.route('/exportar_flujo_valorizado_csv', methods=['GET'])
+def exportar_flujo_valorizado_csv():
+    if 'user_id' not in session or session.get('rol') != 'Administrador': 
+        return redirect(url_for('inventario.inventario'))
+        
+    # Misma lógica de extracción, pero directo a CSV
+    fecha_inicio = request.args.get('fecha_inicio', '')
+    fecha_fin = request.args.get('fecha_fin', '')
+    tipo_filtro = request.args.get('tipo_filtro', 'Todos')
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    query = '''SELECT p.sku, p.nombre, m.tipo, m.fecha, m.cantidad, p.precio, 
+                      (m.cantidad * p.precio) as total_movimiento, u.username as responsable
+               FROM movimientos m
+               LEFT JOIN productos p ON m.producto_id = p.id
+               LEFT JOIN usuarios u ON m.usuario_id = u.id
+               WHERE 1=1'''
+    params = []
+    if fecha_inicio:
+        query += ' AND m.fecha >= %s'
+        params.append(f"{fecha_inicio} 00:00:00")
+    if fecha_fin:
+        query += ' AND m.fecha <= %s'
+        params.append(f"{fecha_fin} 23:59:59")
+        
+    query += ' ORDER BY m.fecha DESC'
+    cursor.execute(query, params)
+    movimientos = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    
+    si = io.StringIO()
+    cw = csv.writer(si)
+    cw.writerow(['Fecha', 'SKU', 'Repuesto', 'Operacion', 'Cantidad', 'Precio Unitario', 'Valor Total', 'Responsable'])
+    for m in movimientos:
+        cw.writerow([m['fecha'], m['sku'], m['nombre'], m['tipo'], m['cantidad'], f"${m['precio']:.2f}", f"${m['total_movimiento']:.2f}", m['responsable']])
+        
+    output = si.getvalue()
+    return Response(output, mimetype="text/csv", headers={"Content-Disposition": "attachment;filename=Flujo_Valorizado.csv"})
+
+# --- NUEVO CÓDIGO: ESTADO FINANCIERO GENERAL ---
+@reportes_bp.route('/estado_financiero', methods=['GET'])
+def estado_financiero():
+    if 'user_id' not in session or session.get('rol') != 'Administrador': 
+        return redirect(url_for('inventario.inventario'))
+    
+    fecha_inicio = request.args.get('fecha_inicio', '')
+    fecha_fin = request.args.get('fecha_fin', '')
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 1. Valor actual total
+    cursor.execute('SELECT SUM(cantidad * precio) as total FROM productos WHERE activo = 1')
+    valor_actual = cursor.fetchone()['total'] or 0.0
+
+    # 2. Resumen de movimientos en el periodo
+    query_movs = '''SELECT m.tipo, SUM(m.cantidad * p.precio) as total_valor
+                    FROM movimientos m
+                    JOIN productos p ON m.producto_id = p.id
+                    WHERE 1=1'''
+    params = []
+    if fecha_inicio:
+        query_movs += ' AND m.fecha >= %s'
+        params.append(f"{fecha_inicio} 00:00:00")
+    if fecha_fin:
+        query_movs += ' AND m.fecha <= %s'
+        params.append(f"{fecha_fin} 23:59:59")
+    query_movs += ' GROUP BY m.tipo'
+    
+    cursor.execute(query_movs, params)
+    res_movs = cursor.fetchall()
+    
+    entradas = 0.0
+    salidas = 0.0
+    ajustes = 0.0
+    
+    for r in res_movs:
+        tipo = r['tipo']
+        # Convertimos explícitamente a float para evitar el choque con Decimal
+        val = float(r['total_valor']) if r['total_valor'] else 0.0
+        
+        if 'Entrada' in tipo or 'Devolución' in tipo or 'Creación' in tipo:
+            entradas += val
+        elif 'Salida' in tipo or 'Venta' in tipo:
+            salidas += val
+        elif 'Ajuste' in tipo:
+            ajustes += val
+
+    # 3. Desglose del valor actual por categoría
+    cursor.execute('''SELECT c.nombre, SUM(p.cantidad) as total_items, SUM(p.cantidad * p.precio) as valor_total
+                      FROM productos p
+                      LEFT JOIN categorias c ON p.categoria_id = c.id
+                      WHERE p.activo = 1
+                      GROUP BY c.id, c.nombre
+                      ORDER BY valor_total DESC''')
+    categorias_valor = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('estado_financiero.html', 
+                           valor_actual=valor_actual,
+                           entradas=entradas,
+                           salidas=salidas,
+                           ajustes=ajustes,
+                           categorias_valor=categorias_valor,
+                           fecha_inicio=fecha_inicio,
+                           fecha_fin=fecha_fin,
+                           username=session.get('username'))
+
