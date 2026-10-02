@@ -456,3 +456,82 @@ def estado_financiero():
                            fecha_fin=fecha_fin,
                            username=session.get('username'))
 
+##################################################################
+
+# --- NUEVO CÓDIGO: GENERADOR DE REPORTES DINÁMICO ---
+@reportes_bp.route('/personalizado', methods=['GET', 'POST'])
+def reporte_personalizado():
+    if 'user_id' not in session or session.get('rol') != 'Administrador': 
+        return redirect(url_for('inventario.inventario'))
+    
+    # Diccionario con todas las columnas que el usuario puede elegir
+    columnas_disponibles = {
+        'sku': 'Código (SKU)',
+        'nombre': 'Nombre del Repuesto',
+        'categoria_nombre': 'Categoría',
+        'descripcion': 'Descripción',
+        'ubicacion': 'Ubicación en Bodega',
+        'cantidad': 'Stock Físico Actual',
+        'stock_minimo': 'Límite de Alerta',
+        'precio': 'Precio Unitario ($)',
+        'valor_total': 'Valor Totalizado ($)'
+    }
+    
+    columnas_seleccionadas = []
+    productos_data = []
+
+    if request.method == 'POST':
+        columnas_seleccionadas = request.form.getlist('columnas')
+        accion = request.form.get('accion') # Puede ser 'ver' o 'csv'
+        
+        if not columnas_seleccionadas:
+            flash('Debe seleccionar al menos una columna para generar el reporte.', 'warning')
+            return redirect(url_for('reportes.reporte_personalizado'))
+            
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('''SELECT p.*, c.nombre as categoria_nombre 
+                          FROM productos p 
+                          LEFT JOIN categorias c ON p.categoria_id = c.id 
+                          WHERE p.activo = 1''')
+        productos = cursor.fetchall()
+        
+        for p in productos:
+            p_dict = dict(p)
+            # Calculamos el valor total al vuelo por si seleccionaron esa columna
+            p_dict['valor_total'] = float(p['cantidad'] * p['precio'])
+            # Asegurarnos de que las categorías vacías no den error
+            if not p_dict['categoria_nombre']:
+                p_dict['categoria_nombre'] = 'Sin Categoría'
+            productos_data.append(p_dict)
+            
+        cursor.close()
+        conn.close()
+
+        # Si el usuario presionó el botón de "Descargar CSV"
+        if accion == 'csv':
+            si = io.StringIO()
+            cw = csv.writer(si)
+            
+            # Escribir cabeceras dinámicas
+            headers = [columnas_disponibles[col] for col in columnas_seleccionadas]
+            cw.writerow(headers)
+            
+            # Escribir filas dinámicas
+            for p in productos_data:
+                row = []
+                for col in columnas_seleccionadas:
+                    val = p.get(col, '')
+                    if col in ['precio', 'valor_total']:
+                        val = f"${float(val):.2f}"
+                    row.append(val)
+                cw.writerow(row)
+            
+            output = si.getvalue()
+            return Response(output, mimetype="text/csv", headers={"Content-Disposition": "attachment;filename=Reporte_A_Medida.csv"})
+
+    return render_template('reporte_personalizado.html', 
+                           columnas_disponibles=columnas_disponibles,
+                           columnas_seleccionadas=columnas_seleccionadas,
+                           productos=productos_data,
+                           username=session.get('username'))

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte a Medida - Equi-Parts</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}" />
+    <style>
+        @media print {
+            body { background-color: white !important; }
+            .navbar, form, .btn, .esconder-impresion { display: none !important; }
+            .card { border: none !important; box-shadow: none !important; }
+            .table { color: black !important; border-color: #dee2e6 !important; }
+            .table thead th { background-color: white !important; color: black !important; border-bottom: 2px solid black !important; }
+            .encabezado-impresion { display: block !important; text-align: center; margin-bottom: 20px; }
+        }
+        .encabezado-impresion { display: none; }
+        
+        /* Estilo para los checkboxes corporativos */
+        .form-check-input:checked { background-color: #18392B; border-color: #18392B; }
+    </style>
+</head>
+<body class="bg-light">
+    {% include 'includes/navbar.html' %}
+    
+    <div class="container-fluid px-4 mt-4 mb-5">
+        <div class="mb-3 esconder-impresion">
+            <a href="{{ url_for('reportes.generar_reporte') }}" class="btn btn-sm btn-secondary"><i class="bi bi-arrow-left"></i> Volver al Dashboard</a>
+        </div>
+
+        <div class="card shadow-sm border-0 p-4 rounded-3 mb-4 esconder-impresion">
+            <h4 class="fw-bold mb-1" style="color: #18392B;"><i class="bi bi-ui-checks-grid me-2" style="color: #C47A3A;"></i> Generador de Reportes a Medida</h4>
+            <p class="text-muted mb-4">Selecciona únicamente las columnas que deseas visualizar o exportar.</p>
+            
+            <form method="POST" action="{{ url_for('reportes.reporte_personalizado') }}">
+                <div class="row mb-4 bg-light p-3 rounded border">
+                    {% for key, label in columnas_disponibles.items() %}
+                    <div class="col-md-3 col-sm-6 mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input shadow-sm" type="checkbox" name="columnas" value="{{ key }}" id="col_{{ key }}" 
+                                {% if key in columnas_seleccionadas or not columnas_seleccionadas and key in ['sku', 'nombre', 'cantidad'] %}checked{% endif %}>
+                            <label class="form-check-label fw-semibold text-dark" for="col_{{ key }}">
+                                {{ label }}
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="submit" name="accion" value="ver" class="btn text-white fw-bold px-4" style="background-color: #18392B;">
+                        <i class="bi bi-table me-1"></i> Generar Vista
+                    </button>
+                    <button type="submit" name="accion" value="csv" class="btn text-white fw-bold px-4" style="background-color: #356859;">
+                        <i class="bi bi-file-earmark-excel-fill me-1"></i> Descargar CSV Directo
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        {% if columnas_seleccionadas and productos %}
+        <div class="card shadow-sm border-0 p-4 rounded-3">
+            <div class="encabezado-impresion">
+                <h2>Equi-Parts S&S</h2>
+                <h4>Reporte de Inventario Personalizado</h4>
+                <p>Generado por: {{ username }}</p>
+                <hr>
+            </div>
+            
+            <div class="d-flex justify-content-between align-items-center mb-3 esconder-impresion">
+                <h5 class="fw-bold m-0" style="color: #18392B;">Vista Previa del Reporte</h5>
+                <button onclick="window.print()" class="btn text-white btn-sm fw-bold shadow-sm" style="background-color: #DE3B40;">
+                    <i class="bi bi-printer-fill"></i> Imprimir PDF
+                </button>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered align-middle mb-0" style="font-size: 0.9rem;">
+                    <thead style="background-color: #18392B; color: white;">
+                        <tr>
+                            <!-- Bucle dinámico para crear las cabeceras elegidas -->
+                            {% for col in columnas_seleccionadas %}
+                            <th>{{ columnas_disponibles[col] }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Bucle dinámico para extraer solo los datos elegidos -->
+                        {% for p in productos %}
+                        <tr>
+                            {% for col in columnas_seleccionadas %}
+                            <td>
+                                {% if col in ['precio', 'valor_total'] %}
+                                    <span class="fw-semibold text-success">${{ "%.2f"|format(p[col]) }}</span>
+                                {% elif col == 'cantidad' %}
+                                    <span class="fw-bold fs-6">{{ p[col] }}</span>
+                                {% else %}
+                                    {{ p[col] }}
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

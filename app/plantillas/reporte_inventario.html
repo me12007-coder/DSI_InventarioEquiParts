@@ -77,11 +77,18 @@
 
         <!-- Reporte de Stock Crítico (Existente adaptado) -->
         <div class="card shadow-sm border-0">
-            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
-                <h5 class="fw-bold m-0" style="color: #DE3B40;"><i class="bi bi-exclamation-triangle-fill me-2"></i>Repuestos en Nivel Crítico (Requieren Abastecimiento)</h5>
-                <a href="{{ url_for('reportes.exportar_reporte_csv') }}" class="btn btn-sm text-white" style="background-color: #18392B;">
-                    <i class="bi bi-filetype-csv me-1"></i> Descargar CSV
-                </a>
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h5 class="fw-bold m-0" style="color: #DE3B40;">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Repuestos en Nivel Crítico
+                </h5>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('reportes.reporte_personalizado') }}" class="btn btn-sm text-dark fw-bold border shadow-sm" style="background-color: #F3F5F2;">
+                        <i class="bi bi-ui-checks-grid me-1" style="color: #C47A3A;"></i> Creador de Reportes a Medida
+                    </a>
+                    <a href="{{ url_for('reportes.exportar_reporte_csv') }}" class="btn btn-sm text-white shadow-sm" style="background-color: #18392B;">
+                        <i class="bi bi-filetype-csv me-1"></i> CSV Críticos
+                    </a>
+                </div>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
