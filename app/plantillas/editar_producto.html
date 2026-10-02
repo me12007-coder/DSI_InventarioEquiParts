@@ -13,8 +13,8 @@
     
     <div class="container mt-4 mb-5">
         <div class="card shadow-sm mx-auto border-0 rounded-3" style="max-width: 750px;">
-            <div class="card-header fw-semibold">
-                <i class="bi bi-pencil-square me-2"></i>
+            <div class="card-header fw-semibold" style="background-color: #18392B; color: white;">
+                <i class="bi bi-pencil-square me-2" style="color: #C47A3A;"></i>
                 Editar Ficha del Producto 
             </div>
             <div class="card-body p-4">
@@ -24,11 +24,12 @@
                         SKU: {{ p.sku }}
                     </span>
                     <p class="text-muted mt-2 mb-0 small">
-                        Modifique la información general, existencias y alertas del producto.
+                        Modifique la información general, existencias, alertas y archivos del producto.
                     </p>
                 </div>
                 
-                <form method="POST">
+                <!-- IMPORTANTE: El enctype="multipart/form-data" permite enviar archivos -->
+                <form method="POST" enctype="multipart/form-data">
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Nombre del Repuesto</label>
                         <div class="input-group">
@@ -86,13 +87,37 @@
                             </div>
                         </div>
                     </div>
+
+                    <h6 class="seccion-formulario mt-0 border-top pt-3">Archivos Adjuntos (Fichas y Fotos)</h6>
+                    <div class="row mb-4">
+                        <div class="col-md-6 mb-3 mb-md-0">
+                            <label class="form-label fw-semibold small text-muted text-uppercase">Fotografía (PNG/JPG)</label>
+                            {% if p.foto %}
+                                <div class="mb-1 small fw-bold" style="color: #356859;">
+                                    <i class="bi bi-image"></i> Archivo actual: {{ p.foto }}
+                                </div>
+                            {% endif %}
+                            <input class="form-control" type="file" name="foto" accept="image/*">
+                            <small class="text-muted" style="font-size: 0.75rem;">Dejar vacío para conservar la foto actual.</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-muted text-uppercase">Ficha Técnica (PDF)</label>
+                            {% if p.ficha_pdf %}
+                                <div class="mb-1 small fw-bold" style="color: #DE3B40;">
+                                    <i class="bi bi-file-earmark-pdf-fill"></i> Archivo actual: {{ p.ficha_pdf }}
+                                </div>
+                            {% endif %}
+                            <input class="form-control" type="file" name="pdf" accept=".pdf">
+                            <small class="text-muted" style="font-size: 0.75rem;">Dejar vacío para conservar el PDF actual.</small>
+                        </div>
+                    </div>
                     
                     <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
-                        <a href="{{ url_for('inventario.inventario') }}" class="btn btn-secondary px-4">
+                        <a href="{{ url_for('inventario.inventario') }}" class="btn btn-secondary px-4 fw-bold">
                             <i class="bi bi-arrow-left me-1"></i>
                             Cancelar
                         </a>
-                        <button type="submit" class="btn btn-success px-4">
+                        <button type="submit" class="btn text-white px-4 fw-bold shadow-sm" style="background-color: #356859;">
                             <i class="bi bi-check-circle me-1"></i>
                             Guardar Cambios
                         </button>
@@ -101,6 +126,5 @@
             </div>
         </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

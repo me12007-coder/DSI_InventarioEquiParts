@@ -90,21 +90,43 @@ def editar_producto(id):
     
     conn = get_db_connection()
     cursor = conn.cursor()
+    
     if request.method == 'POST':
         data = request.form
         cat_raw = data.get('categoria_id')
         categoria_id = int(cat_raw) if cat_raw else None
-        
-        # Recuperamos el nuevo stock mínimo del formulario
         stock_minimo = int(data.get('stock_minimo', 5))
         
-        # Actualizamos la consulta para incluir stock_minimo
-        cursor.execute('''UPDATE productos SET nombre = %s, descripcion = %s, precio = %s, ubicacion = %s, categoria_id = %s, cantidad = %s, stock_minimo = %s
-                        WHERE id = %s''', 
+        # 1. Obtener los nombres de los archivos actuales de la base de datos
+        cursor.execute('SELECT foto, ficha_pdf FROM productos WHERE id = %s', (id,))
+        prod_actual = cursor.fetchone()
+        foto_path = prod_actual['foto'] if prod_actual['foto'] else ""
+        pdf_path = prod_actual['ficha_pdf'] if prod_actual['ficha_pdf'] else ""
+        
+        # 2. Revisar si subieron nuevos archivos en el formulario
+        foto = request.files.get('foto')
+        pdf = request.files.get('pdf')
+        
+        # Si hay foto nueva, guardarla y actualizar la ruta
+        if foto and foto.filename:
+            foto_path = secure_filename(foto.filename)
+            foto.save(os.path.join(current_app.config['UPLOAD_FOLDER'], foto_path))
+            
+        # Si hay PDF nuevo, guardarlo y actualizar la ruta
+        if pdf and pdf.filename:
+            pdf_path = secure_filename(pdf.filename)
+            pdf.save(os.path.join(current_app.config['UPLOAD_FOLDER'], pdf_path))
+        
+        # 3. Actualizar la base de datos completa
+        cursor.execute('''UPDATE productos SET nombre = %s, descripcion = %s, precio = %s, 
+                          ubicacion = %s, categoria_id = %s, cantidad = %s, stock_minimo = %s,
+                          foto = %s, ficha_pdf = %s
+                          WHERE id = %s''', 
                      (str(data.get('nombre')), str(data.get('descripcion')), float(data.get('precio')), 
-                      str(data.get('ubicacion')), categoria_id, int(data.get('cantidad', 0)), stock_minimo, id))
+                      str(data.get('ubicacion')), categoria_id, int(data.get('cantidad', 0)), stock_minimo, 
+                      foto_path, pdf_path, id))
         conn.commit()
-        flash('Producto actualizado.', 'success')
+        flash('Ficha del producto actualizada correctamente.', 'success')
         cursor.close()
         conn.close()
         return redirect(url_for('inventario.inventario'))
