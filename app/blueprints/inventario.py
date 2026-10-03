@@ -31,7 +31,10 @@ def inventario():
             pdf.save(os.path.join(current_app.config['UPLOAD_FOLDER'], pdf_path))
 
         data = request.form
-        sku = str(data.get('sku', '')).strip()
+        sku = str(data.get('sku', '')).strip().upper()
+        if ' ' in sku:
+            flash('Error: El código SKU no puede contener espacios en blanco (use guiones).', 'danger')
+            return redirect(url_for('inventario.inventario'))
         nombre = str(data.get('nombre', '')).strip()
         descripcion = str(data.get('descripcion', '')).strip()
         cantidad = int(data.get('cantidad', 0))
@@ -107,13 +110,27 @@ def editar_producto(id):
         foto = request.files.get('foto')
         pdf = request.files.get('pdf')
         
-        # Si hay foto nueva, guardarla y actualizar la ruta
+        # --- LÓGICA PARA LA FOTO ---
         if foto and foto.filename:
+            # Si ya existía una foto vieja, la borramos físicamente del disco duro
+            if prod_actual['foto']:
+                vieja_ruta_foto = os.path.join(current_app.config['UPLOAD_FOLDER'], prod_actual['foto'])
+                if os.path.exists(vieja_ruta_foto):
+                    os.remove(vieja_ruta_foto) # <-- Aquí se elimina la basura
+            
+            # Guardamos la nueva foto
             foto_path = secure_filename(foto.filename)
             foto.save(os.path.join(current_app.config['UPLOAD_FOLDER'], foto_path))
             
-        # Si hay PDF nuevo, guardarlo y actualizar la ruta
+        # --- LÓGICA PARA EL PDF ---
         if pdf and pdf.filename:
+            # Si ya existía un PDF viejo, lo borramos físicamente
+            if prod_actual['ficha_pdf']:
+                vieja_ruta_pdf = os.path.join(current_app.config['UPLOAD_FOLDER'], prod_actual['ficha_pdf'])
+                if os.path.exists(vieja_ruta_pdf):
+                    os.remove(vieja_ruta_pdf) # <-- Aquí se elimina la basura
+            
+            # Guardamos el nuevo PDF
             pdf_path = secure_filename(pdf.filename)
             pdf.save(os.path.join(current_app.config['UPLOAD_FOLDER'], pdf_path))
         
@@ -188,9 +205,20 @@ def eliminar_categoria(id):
     
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('UPDATE productos SET categoria_id = NULL WHERE categoria_id = %s', (id,))
-    cursor.execute('DELETE FROM categorias WHERE id = %s', (id,))
-    conn.commit()
+    
+    # 1. Verificar si hay productos que dependen de esta categoría
+    cursor.execute('SELECT COUNT(*) as total FROM productos WHERE categoria_id = %s', (id,))
+    resultado = cursor.fetchone()
+    
+    if resultado['total'] > 0:
+        # Bloquear eliminación y avisar al usuario
+        flash(f"No se puede eliminar: Hay {resultado['total']} repuesto(s) asignados a esta categoría.", 'danger')
+    else:
+        # 2. Si no hay dependencias, se elimina con seguridad
+        cursor.execute('DELETE FROM categorias WHERE id = %s', (id,))
+        conn.commit()
+        flash('Categoría eliminada correctamente.', 'success')
+        
     cursor.close()
     conn.close()
     return redirect(url_for('inventario.categorias'))
@@ -524,3 +552,20 @@ def exportar_trazabilidad_csv(id):
     
     output = si.getvalue()
     return Response(output, mimetype="text/csv", headers={"Content-Disposition": f"attachment;filename=Trazabilidad_{producto['sku']}.csv"})
+
+
+@inventario_bp.route('/api/validar_sku', methods=['GET'])
+def validar_sku():
+    sku = request.args.get('sku', '').strip()
+    if not sku:
+        return jsonify({'existe': False})
+        
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    # Verifica si el SKU existe (incluso si el producto fue eliminado lógicamente)
+    cursor.execute('SELECT COUNT(*) as total FROM productos WHERE sku = %s', (sku,))
+    resultado = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    
+    return jsonify({'existe': resultado['total'] > 0})

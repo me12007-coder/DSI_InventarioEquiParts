@@ -341,5 +341,63 @@
         });
       });
     </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Buscamos el campo SKU dentro del modal de crear producto
+            const skuInput = document.querySelector('input[name="sku"]');
+            
+            if (skuInput) {
+                // Buscamos el botón de guardar de ese formulario
+                const submitBtn = skuInput.closest('form').querySelector('button[type="submit"]');
+                
+                // Creamos un mensajito rojo que aparecerá debajo del campo
+                const feedback = document.createElement('div');
+                feedback.className = 'invalid-feedback fw-bold';
+                skuInput.parentNode.insertBefore(feedback, skuInput.nextSibling);
+
+                // Escuchamos cada vez que el usuario teclea algo
+                skuInput.addEventListener('input', async function() {
+                    // 1. Forzar mayúsculas automáticamente mientras escribe
+                    let valor = this.value.toUpperCase();
+                    this.value = valor;
+
+                    // 2. Validar que no tenga espacios
+                    if (valor.includes(' ')) {
+                        this.classList.add('is-invalid');
+                        feedback.innerText = 'El SKU no puede contener espacios.';
+                        submitBtn.disabled = true; // Bloquea el botón de guardar
+                        return;
+                    }
+
+                    // 3. Consultar a la base de datos en tiempo real si el SKU ya existe
+                    if (valor.length > 0) {
+                        try {
+                            const response = await fetch('/api/validar_sku?sku=' + encodeURIComponent(valor));
+                            const data = await response.json();
+                            
+                            if (data.existe) {
+                                this.classList.remove('is-valid');
+                                this.classList.add('is-invalid');
+                                feedback.innerText = 'Este SKU ya está registrado en el sistema.';
+                                submitBtn.disabled = true; // Bloquea el botón
+                            } else {
+                                // Si está perfecto, lo marcamos en verde y habilitamos el botón
+                                this.classList.remove('is-invalid');
+                                this.classList.add('is-valid');
+                                submitBtn.disabled = false; 
+                            }
+                        } catch (error) {
+                            console.error("Error validando SKU:", error);
+                        }
+                    } else {
+                        // Si el campo está vacío, limpiamos las alertas
+                        this.classList.remove('is-invalid', 'is-valid');
+                        submitBtn.disabled = false;
+                    }
+                });
+            }
+        });
+      </script>
   </body>
 </html>
