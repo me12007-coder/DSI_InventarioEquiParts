@@ -32,9 +32,12 @@ def inventario():
 
         data = request.form
         sku = str(data.get('sku', '')).strip().upper()
+        
+        # NUEVA VALIDACIÓN: Evitar que el SKU tenga espacios
         if ' ' in sku:
             flash('Error: El código SKU no puede contener espacios en blanco (use guiones).', 'danger')
             return redirect(url_for('inventario.inventario'))
+            
         nombre = str(data.get('nombre', '')).strip()
         descripcion = str(data.get('descripcion', '')).strip()
         cantidad = int(data.get('cantidad', 0))
@@ -82,6 +85,7 @@ def inventario():
     cursor.close()
     conn.close()
     
+    # Renderizamos sin el código de la gráfica, que estaba causando error aquí
     return render_template('inventario.html', productos=productos, categorias=categorias, 
                            username=session.get('username'), rol=session.get('rol'), 
                            busqueda=busqueda, alertas_stock=alertas_stock)
@@ -100,41 +104,30 @@ def editar_producto(id):
         categoria_id = int(cat_raw) if cat_raw else None
         stock_minimo = int(data.get('stock_minimo', 5))
         
-        # 1. Obtener los nombres de los archivos actuales de la base de datos
         cursor.execute('SELECT foto, ficha_pdf FROM productos WHERE id = %s', (id,))
         prod_actual = cursor.fetchone()
         foto_path = prod_actual['foto'] if prod_actual['foto'] else ""
         pdf_path = prod_actual['ficha_pdf'] if prod_actual['ficha_pdf'] else ""
         
-        # 2. Revisar si subieron nuevos archivos en el formulario
         foto = request.files.get('foto')
         pdf = request.files.get('pdf')
         
-        # --- LÓGICA PARA LA FOTO ---
         if foto and foto.filename:
-            # Si ya existía una foto vieja, la borramos físicamente del disco duro
             if prod_actual['foto']:
                 vieja_ruta_foto = os.path.join(current_app.config['UPLOAD_FOLDER'], prod_actual['foto'])
                 if os.path.exists(vieja_ruta_foto):
-                    os.remove(vieja_ruta_foto) # <-- Aquí se elimina la basura
-            
-            # Guardamos la nueva foto
+                    os.remove(vieja_ruta_foto)
             foto_path = secure_filename(foto.filename)
             foto.save(os.path.join(current_app.config['UPLOAD_FOLDER'], foto_path))
             
-        # --- LÓGICA PARA EL PDF ---
         if pdf and pdf.filename:
-            # Si ya existía un PDF viejo, lo borramos físicamente
             if prod_actual['ficha_pdf']:
                 vieja_ruta_pdf = os.path.join(current_app.config['UPLOAD_FOLDER'], prod_actual['ficha_pdf'])
                 if os.path.exists(vieja_ruta_pdf):
-                    os.remove(vieja_ruta_pdf) # <-- Aquí se elimina la basura
-            
-            # Guardamos el nuevo PDF
+                    os.remove(vieja_ruta_pdf)
             pdf_path = secure_filename(pdf.filename)
             pdf.save(os.path.join(current_app.config['UPLOAD_FOLDER'], pdf_path))
         
-        # 3. Actualizar la base de datos completa
         cursor.execute('''UPDATE productos SET nombre = %s, descripcion = %s, precio = %s, 
                           ubicacion = %s, categoria_id = %s, cantidad = %s, stock_minimo = %s,
                           foto = %s, ficha_pdf = %s
@@ -198,6 +191,30 @@ def categorias():
     conn.close()
     return render_template('categorias.html', categorias=c)
 
+@inventario_bp.route('/editar_categoria/<int:id>', methods=['POST'])
+def editar_categoria(id):
+    if 'user_id' not in session or session.get('rol') != 'Administrador': 
+        return redirect(url_for('inventario.inventario'))
+    
+    nuevo_nombre = request.form.get('nombre', '').strip()
+    if not nuevo_nombre:
+        flash('El nombre de la categoría no puede estar vacío.', 'danger')
+        return redirect(url_for('inventario.categorias'))
+        
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('UPDATE categorias SET nombre = %s WHERE id = %s', (nuevo_nombre, id))
+        conn.commit()
+        flash('Categoría actualizada correctamente.', 'success')
+    except Exception as e:
+        flash('Error al actualizar la categoría. Es posible que el nombre ya exista.', 'danger')
+    finally:
+        cursor.close()
+        conn.close()
+        
+    return redirect(url_for('inventario.categorias'))
+
 @inventario_bp.route('/eliminar_categoria/<int:id>', methods=['POST'])
 def eliminar_categoria(id):
     if 'user_id' not in session or session.get('rol') != 'Administrador': 
@@ -211,10 +228,8 @@ def eliminar_categoria(id):
     resultado = cursor.fetchone()
     
     if resultado['total'] > 0:
-        # Bloquear eliminación y avisar al usuario
         flash(f"No se puede eliminar: Hay {resultado['total']} repuesto(s) asignados a esta categoría.", 'danger')
     else:
-        # 2. Si no hay dependencias, se elimina con seguridad
         cursor.execute('DELETE FROM categorias WHERE id = %s', (id,))
         conn.commit()
         flash('Categoría eliminada correctamente.', 'success')
@@ -283,12 +298,61 @@ def detalle_producto(id):
                     error = True
                 else:
                     diferencia = cantidad_mov - stock_fisico 
-                    
                     cursor.execute('UPDATE productos SET cantidad = %s WHERE id = %s', (cantidad_mov, id))
                     flash('Ajuste de inventario registrado correctamente.', 'success')
-                    
                     tipo = f"Ajuste manual: {justificacion}"
                     cantidad_mov = diferencia
+
+        # --- NUEVA LÓGICA: TRASLADO A MERMAS ---
+        elif tipo == 'Mermar':
+            if session.get('rol') != 'Administrador':
+                flash('Acceso denegado.', 'danger')
+                error = True
+            else:
+                justificacion = request.form.get('justificacion', '').strip()
+                if not justificacion:
+                    flash('Error: Justificación obligatoria.', 'danger')
+                    error = True
+                elif cantidad_mov > stock_disponible:
+                    flash('Error: No hay suficiente stock disponible para mermar.', 'danger')
+                    error = True
+                else:
+                    # Restamos del físico porque ya no se puede vender
+                    nueva_cantidad = stock_fisico - cantidad_mov
+                    cursor.execute('UPDATE productos SET cantidad = %s WHERE id = %s', (nueva_cantidad, id))
+                    flash('Repuesto trasladado a Mermas correctamente.', 'success')
+                    tipo = f"Traslado a Mermas: {justificacion}"
+
+        # --- NUEVA LÓGICA: DESTRUCCIÓN DESDE MERMAS ---
+        elif tipo == 'Baja':
+            if session.get('rol') != 'Administrador':
+                flash('Acceso denegado.', 'danger')
+                error = True
+            else:
+                justificacion = request.form.get('justificacion', '').strip()
+                
+                # Averiguamos cuántas piezas tenemos en Mermas para no destruir de más
+                cursor.execute('''
+                    SELECT 
+                        SUM(CASE WHEN tipo LIKE 'Traslado a Mermas%%' OR tipo LIKE 'Devolución (Dañado%%' THEN cantidad ELSE 0 END) - 
+                        SUM(CASE WHEN tipo LIKE 'Destrucción de Merma%%' THEN cantidad ELSE 0 END) as mermas_actuales
+                    FROM movimientos 
+                    WHERE producto_id = %s
+                ''', (id,))
+                mermas_db = cursor.fetchone()
+                mermas_disponibles = mermas_db['mermas_actuales'] if mermas_db['mermas_actuales'] else 0
+
+                if not justificacion:
+                    flash('Error: Justificación obligatoria.', 'danger')
+                    error = True
+                elif cantidad_mov > mermas_disponibles:
+                    flash(f'Error: Solo tienes {int(mermas_disponibles)} piezas en Mermas. No puedes destruir {cantidad_mov}.', 'danger')
+                    error = True
+                else:
+                    # El stock físico NO cambia porque la pieza ya se había restado al enviarla a Mermas.
+                    # Solo registramos el movimiento para que baje el contador virtual de Mermas.
+                    flash('Repuesto destruido definitivamente.', 'success')
+                    tipo = f"Destrucción de Merma: {justificacion}"
 
         elif tipo == 'Devolucion':
             if session.get('rol') != 'Administrador':
@@ -297,20 +361,27 @@ def detalle_producto(id):
             else:
                 motivo = request.form.get('motivo_devolucion', '').strip()
                 referencia = request.form.get('referencia_venta', '').strip()
+                estado_pieza = request.form.get('estado_devolucion', 'Bueno')
+                
                 if not motivo or not referencia:
                     flash('Error: El motivo y la referencia son obligatorios para una devolución.', 'danger')
                     error = True
                 else:
-                    cursor.execute('UPDATE productos SET cantidad = cantidad + %s WHERE id = %s', (cantidad_mov, id))
-                    flash('Devolución registrada, el stock ha reingresado.', 'success')
-                    tipo = f"Devolución: {motivo} (Ref: {referencia})"
+                    if estado_pieza == 'Bueno':
+                        cursor.execute('UPDATE productos SET cantidad = cantidad + %s WHERE id = %s', (cantidad_mov, id))
+                        flash('Devolución registrada, el stock ha reingresado a la bodega.', 'success')
+                        tipo = f"Devolución (Reingreso): {motivo} (Ref: {referencia})"
+                    else:
+                        flash('Devolución por producto dañado. La pieza se ha enviado a Mermas.', 'warning')
+                        tipo = f"Devolución (Dañado/Merma): {motivo} (Ref: {referencia})"
 
         if not error:
+            tipo_seguro = tipo[:50] 
             cursor.execute('INSERT INTO movimientos (producto_id, usuario_id, tipo, cantidad) VALUES (%s, %s, %s, %s)',
-                           (id, session['user_id'], tipo, cantidad_mov))
+                           (id, session['user_id'], tipo_seguro, cantidad_mov))
             mov_id = cursor.lastrowid
             
-            if tipo in ['Salida', 'Venta_Cotizacion', 'Cotizacion'] or tipo.startswith('Ajuste'):
+            if tipo in ['Salida', 'Venta_Cotizacion', 'Cotizacion', 'Mermar'] or tipo.startswith('Ajuste'):
                 cursor.execute('SELECT sku, nombre, cantidad, stock_reservado, stock_minimo FROM productos WHERE id = %s', (id,))
                 p_actualizado = cursor.fetchone()
                 stock_real = p_actualizado['cantidad'] - p_actualizado['stock_reservado']
@@ -330,7 +401,7 @@ def detalle_producto(id):
                         hilo.start()
 
             conn.commit()
-            if tipo in ['Salida', 'Venta_Cotizacion', 'Cotizacion']or tipo.startswith('Devolución'):
+            if tipo in ['Salida', 'Venta_Cotizacion', 'Cotizacion', 'Mermar', 'Baja'] or tipo.startswith('Devolución'):
                 cursor.close()
                 conn.close()
                 return redirect(url_for('inventario.comprobante', mov_id=mov_id))
@@ -341,10 +412,50 @@ def detalle_producto(id):
                                 JOIN usuarios u ON m.usuario_id = u.id 
                                 WHERE m.producto_id = %s ORDER BY m.fecha DESC''', (id,))
     historial = cursor.fetchall()
+    
+    # --- CÁLCULO DE LA BODEGA VIRTUAL DE MERMAS ---
+    # Sumamos lo que entró a mermas (Traslados y Devoluciones Dañadas) 
+    # y le restamos lo que ya se destruyó/desechó.
+    cursor.execute('''
+        SELECT 
+            SUM(CASE WHEN tipo LIKE 'Traslado a Mermas%%' OR tipo LIKE 'Devolución (Dañado%%' THEN cantidad ELSE 0 END) - 
+            SUM(CASE WHEN tipo LIKE 'Destrucción de Merma%%' THEN cantidad ELSE 0 END) as mermas_actuales
+        FROM movimientos
+        WHERE producto_id = %s 
+    ''', (id,))
+    mermas_ui = cursor.fetchone()
+    total_dañados = mermas_ui['mermas_actuales'] if mermas_ui['mermas_actuales'] else 0
+
+    # --- GRÁFICA: VENTAS VS DAÑOS ---
+    cursor.execute('''
+        SELECT DATE(fecha) as dia, 
+               SUM(CASE WHEN tipo IN ('Salida', 'Venta_Cotizacion') THEN cantidad ELSE 0 END) as total_ventas,
+               SUM(CASE WHEN tipo LIKE 'Traslado a Mermas%%' OR tipo LIKE 'Devolución (Dañado%%' THEN cantidad ELSE 0 END) as total_mermas
+        FROM movimientos 
+        WHERE producto_id = %s 
+          AND fecha >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+          AND (tipo IN ('Salida', 'Venta_Cotizacion') 
+               OR tipo LIKE 'Traslado a Mermas%%' 
+               OR tipo LIKE 'Devolución (Dañado%%')
+        GROUP BY DATE(fecha) 
+        ORDER BY dia ASC LIMIT 30
+    ''', (id,))
+    tendencia = cursor.fetchall()
+    
+    fechas_chart = [row['dia'].strftime('%d %b') for row in tendencia]
+    ventas_chart = [row['total_ventas'] for row in tendencia]
+    mermas_chart = [row['total_mermas'] for row in tendencia]
+    
     cursor.close()
     conn.close()
-    return render_template('detalle_producto.html', p=producto, movimientos=historial)
-
+    
+    return render_template('detalle_producto.html', 
+                           p=producto, 
+                           movimientos=historial,
+                           total_dañados=int(total_dañados),
+                           fechas_chart=fechas_chart,
+                           ventas_chart=ventas_chart,
+                           mermas_chart=mermas_chart)
 
 @inventario_bp.route('/comprobante/<int:mov_id>')
 def comprobante(mov_id):
@@ -406,7 +517,6 @@ def importar_csv():
                     categoria_id = int(row[5]) if len(row) > 5 and row[5].isdigit() else None
                     ubicacion = str(row[6]).strip() if len(row) > 6 else "Bodega Central"
                     
-                    # LEE LA COLUMNA 8 (índice 7) PARA EL STOCK MÍNIMO. Si no hay dato, usa 5.
                     stock_minimo = int(row[7]) if len(row) > 7 and row[7].isdigit() else 5
 
                     try:
@@ -440,11 +550,9 @@ def importar_csv():
 
 @inventario_bp.route('/descargar_plantilla_csv')
 def descargar_plantilla_csv():
-    # Protección: solo Admin o Bodeguero
     if 'user_id' not in session or session.get('rol') not in ['Administrador', 'Bodeguero']:
         return redirect(url_for('inventario.inventario'))
     
-    # Cabeceras exactas que espera tu función importar_csv, incluyendo stock_minimo
     csv_content = "sku,nombre,descripcion,cantidad,precio,categoria_id,ubicacion,stock_minimo\n"
     csv_content += "EX-001,Ejemplo de Repuesto,Descripción breve,10,150.50,1,Estante A-1,3\n"
     return Response(
@@ -470,7 +578,6 @@ def api_filtrar_productos():
         params.append(cat_id)
     
     if busqueda:
-        # Busca por SKU, Nombre (donde podría estar la marca) o Descripción
         query += ' AND (p.sku LIKE %s OR p.nombre LIKE %s OR p.descripcion LIKE %s)'
         params.extend([f'%{busqueda}%', f'%{busqueda}%', f'%{busqueda}%'])
 
@@ -497,7 +604,6 @@ def api_filtrar_productos():
 
 @inventario_bp.route('/api/notificaciones', methods=['GET'])
 def api_notificaciones():
-    # Solo los administradores reciben estas alertas
     if 'user_id' not in session or session.get('rol') != 'Administrador':
         return current_app.response_class(response='{"alertas": 0}', status=200, mimetype='application/json')
     
@@ -510,7 +616,6 @@ def api_notificaciones():
     cursor.close()
     conn.close()
     
-    # Retornamos el número en formato JSON
     return jsonify({'alertas': criticos['total']})
 
 @inventario_bp.route('/exportar_trazabilidad/<int:id>')
@@ -538,13 +643,10 @@ def exportar_trazabilidad_csv(id):
 
     si = io.StringIO()
     cw = csv.writer(si)
-    # Título y metadatos en el CSV
     cw.writerow(['Reporte de Trazabilidad'])
     cw.writerow(['Repuesto:', producto['nombre']])
     cw.writerow(['SKU:', producto['sku']])
-    cw.writerow([]) # Fila vacía para separar
-    
-    # Encabezados de la tabla
+    cw.writerow([])
     cw.writerow(['Fecha', 'Operario', 'Movimiento', 'Cantidad'])
     
     for h in historial:
@@ -552,7 +654,6 @@ def exportar_trazabilidad_csv(id):
     
     output = si.getvalue()
     return Response(output, mimetype="text/csv", headers={"Content-Disposition": f"attachment;filename=Trazabilidad_{producto['sku']}.csv"})
-
 
 @inventario_bp.route('/api/validar_sku', methods=['GET'])
 def validar_sku():
@@ -562,7 +663,6 @@ def validar_sku():
         
     conn = get_db_connection()
     cursor = conn.cursor()
-    # Verifica si el SKU existe (incluso si el producto fue eliminado lógicamente)
     cursor.execute('SELECT COUNT(*) as total FROM productos WHERE sku = %s', (sku,))
     resultado = cursor.fetchone()
     cursor.close()

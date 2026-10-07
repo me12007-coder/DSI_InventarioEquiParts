@@ -18,8 +18,9 @@
         .encabezado-impresion { display: none; }
         
         /* Estilo para los checkboxes corporativos */
-        .form-check-input:checked { background-color: #18392B; border-color: #18392B; }
+        .form-check-input:checked { background-color: #1D1D1F; border-color: #1D1D1F; }
     </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mojave-theme.css') }}" />
 </head>
 <body class="bg-light">
     {% include 'includes/navbar.html' %}
@@ -30,7 +31,7 @@
         </div>
 
         <div class="card shadow-sm border-0 p-4 rounded-3 mb-4 esconder-impresion">
-            <h4 class="fw-bold mb-1" style="color: #18392B;"><i class="bi bi-ui-checks-grid me-2" style="color: #C47A3A;"></i> Generador de Reportes a Medida</h4>
+            <h4 class="fw-bold mb-1" style="color: #1D1D1F;"><i class="bi bi-ui-checks-grid me-2" style="color: #7B8088;"></i> Generador de Reportes a Medida</h4>
             <p class="text-muted mb-4">Selecciona únicamente las columnas que deseas visualizar o exportar.</p>
             
             <form method="POST" action="{{ url_for('reportes.reporte_personalizado') }}">
@@ -49,10 +50,10 @@
                 </div>
                 
                 <div class="d-flex justify-content-end gap-2">
-                    <button type="submit" name="accion" value="ver" class="btn text-white fw-bold px-4" style="background-color: #18392B;">
+                    <button type="submit" name="accion" value="ver" class="btn text-white fw-bold px-4" style="background-color: #1D1D1F;">
                         <i class="bi bi-table me-1"></i> Generar Vista
                     </button>
-                    <button type="submit" name="accion" value="csv" class="btn text-white fw-bold px-4" style="background-color: #356859;">
+                    <button type="submit" name="accion" value="csv" class="btn text-white fw-bold px-4" style="background-color: #5B708D;">
                         <i class="bi bi-file-earmark-excel-fill me-1"></i> Descargar CSV Directo
                     </button>
                 </div>
@@ -69,15 +70,15 @@
             </div>
             
             <div class="d-flex justify-content-between align-items-center mb-3 esconder-impresion">
-                <h5 class="fw-bold m-0" style="color: #18392B;">Vista Previa del Reporte</h5>
-                <button onclick="window.print()" class="btn text-white btn-sm fw-bold shadow-sm" style="background-color: #DE3B40;">
+                <h5 class="fw-bold m-0" style="color: #1D1D1F;">Vista Previa del Reporte</h5>
+                <button onclick="window.print()" class="btn text-white btn-sm fw-bold shadow-sm" style="background-color: #B86A55;">
                     <i class="bi bi-printer-fill"></i> Imprimir PDF
                 </button>
             </div>
 
             <div class="table-responsive">
                 <table class="table table-hover table-bordered align-middle mb-0" style="font-size: 0.9rem;">
-                    <thead style="background-color: #18392B; color: white;">
+                    <thead style="background-color: #1D1D1F; color: white;">
                         <tr>
                             <!-- Bucle dinámico para crear las cabeceras elegidas -->
                             {% for col in columnas_seleccionadas %}

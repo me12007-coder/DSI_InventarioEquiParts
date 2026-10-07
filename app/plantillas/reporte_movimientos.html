@@ -22,6 +22,7 @@
         }
         .encabezado-impresion { display: none; }
     </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mojave-theme.css') }}" />
 </head>
 <body class="bg-light">
     {% include 'includes/navbar.html' %}
@@ -42,8 +43,8 @@
                 <hr>
             </div>
 
-            <h3 class="fw-bold mb-1 esconder-impresion" style="color: #18392B;">
-                <i class="bi bi-arrow-left-right me-2" style="color: #356859;"></i> Reporte de Entradas y Salidas
+            <h3 class="fw-bold mb-1 esconder-impresion" style="color: #1D1D1F;">
+                <i class="bi bi-arrow-left-right me-2" style="color: #5B708D;"></i> Reporte de Entradas y Salidas
             </h3>
             <p class="text-muted mb-4 esconder-impresion">Analiza el flujo de movimientos, detecta patrones y rastrea responsables por fechas.</p>
             
@@ -66,7 +67,7 @@
                     </select>
                 </div>
                 <div class="col-md-2 d-flex gap-2">
-                    <button type="submit" class="btn w-100 fw-bold text-white shadow-sm" style="background-color: #18392B;">
+                    <button type="submit" class="btn w-100 fw-bold text-white shadow-sm" style="background-color: #1D1D1F;">
                         <i class="bi bi-funnel-fill"></i>
                     </button>
                     <a href="{{ url_for('reportes.flujo_movimientos') }}" class="btn btn-secondary shadow-sm" title="Limpiar Filtros">
@@ -76,15 +77,15 @@
             </form>
 
             <div class="d-flex justify-content-between align-items-center mb-3 esconder-impresion">
-                <h5 class="fw-bold m-0" style="color: #18392B;">
-                    Resultados encontrados: <span class="badge" style="background-color: #C47A3A;">{{ movimientos|length }}</span>
+                <h5 class="fw-bold m-0" style="color: #1D1D1F;">
+                    Resultados encontrados: <span class="badge" style="background-color: #7B8088;">{{ movimientos|length }}</span>
                 </h5>
                 
                 <div class="d-flex gap-2">
-                    <a href="{{ url_for('reportes.exportar_flujo_csv', fecha_inicio=fecha_inicio, fecha_fin=fecha_fin, tipo_filtro=tipo_filtro) }}" class="btn text-white btn-sm fw-bold shadow-sm" style="background-color: #356859;">
+                    <a href="{{ url_for('reportes.exportar_flujo_csv', fecha_inicio=fecha_inicio, fecha_fin=fecha_fin, tipo_filtro=tipo_filtro) }}" class="btn text-white btn-sm fw-bold shadow-sm" style="background-color: #5B708D;">
                         <i class="bi bi-file-earmark-excel-fill"></i> CSV
                     </a>
-                    <button onclick="window.print()" class="btn text-white btn-sm fw-bold shadow-sm" style="background-color: #DE3B40;">
+                    <button onclick="window.print()" class="btn text-white btn-sm fw-bold shadow-sm" style="background-color: #B86A55;">
                         <i class="bi bi-printer-fill"></i> PDF
                     </button>
                 </div>
@@ -92,7 +93,7 @@
             
             <div class="table-responsive">
                 <table class="table table-hover table-bordered align-middle mb-0" style="font-size: 0.9rem;">
-                    <thead style="background-color: #18392B; color: white;" class="text-center">
+                    <thead style="background-color: #1D1D1F; color: white;" class="text-center">
                         <tr>
                             <th>Fecha y Hora</th>
                             <th>Código (SKU)</th>
@@ -120,7 +121,7 @@
                                     <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary px-2 py-1">{{ m.tipo }}</span>
                                 {% endif %}
                             </td>
-                            <td class="text-center fw-bold fs-6" style="color: #18392B;">{{ m.cantidad }}</td>
+                            <td class="text-center fw-bold fs-6" style="color: #1D1D1F;">{{ m.cantidad }}</td>
                             <td class="text-center text-muted">
                                 <i class="bi bi-person-fill"></i> {{ m.responsable or 'Sistema' }}
                             </td>

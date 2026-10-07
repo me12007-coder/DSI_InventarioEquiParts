@@ -21,6 +21,7 @@
         }
         .encabezado-impresion { display: none; }
     </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mojave-theme.css') }}" />
 </head>
 <body class="bg-light">
     {% include 'includes/navbar.html' %}
@@ -40,8 +41,8 @@
                 <hr>
             </div>
 
-            <h3 class="fw-bold mb-1 esconder-impresion" style="color: #18392B;">
-                <i class="bi bi-clock-history me-2" style="color: #C47A3A;"></i> Reporte de Inventario a Fecha de Corte
+            <h3 class="fw-bold mb-1 esconder-impresion" style="color: #1D1D1F;">
+                <i class="bi bi-clock-history me-2" style="color: #7B8088;"></i> Reporte de Inventario a Fecha de Corte
             </h3>
             <p class="text-muted mb-4 esconder-impresion">Calcula el stock existente (reconstrucción matemática) hasta el final del día seleccionado.</p>
             
@@ -51,7 +52,7 @@
                     <input type="date" name="fecha_limite" class="form-control" required value="{{ fecha_consulta }}">
                 </div>
                 <div class="col-md-3">
-                    <button type="submit" class="btn w-100 fw-bold text-white" style="background-color: #356859;">
+                    <button type="submit" class="btn w-100 fw-bold text-white" style="background-color: #5B708D;">
                         <i class="bi bi-search me-1"></i> Generar Reporte
                     </button>
                 </div>
@@ -59,13 +60,13 @@
 
             {% if fecha_consulta %}
             <div class="d-flex justify-content-between align-items-center mb-3 esconder-impresion">
-                <h5 class="fw-bold m-0" style="color: #18392B;">Estado del Inventario al <span style="color: #C47A3A;">{{ fecha_consulta }}</span></h5>
+                <h5 class="fw-bold m-0" style="color: #1D1D1F;">Estado del Inventario al <span style="color: #7B8088;">{{ fecha_consulta }}</span></h5>
                 
                 <div class="d-flex gap-2">
-                    <a href="{{ url_for('reportes.exportar_historico_csv', fecha=fecha_consulta) }}" class="btn text-white btn-sm fw-bold shadow-sm" style="background-color: #356859;">
+                    <a href="{{ url_for('reportes.exportar_historico_csv', fecha=fecha_consulta) }}" class="btn text-white btn-sm fw-bold shadow-sm" style="background-color: #5B708D;">
                         <i class="bi bi-file-earmark-excel-fill"></i> Descargar CSV
                     </a>
-                    <button onclick="window.print()" class="btn btn-sm fw-bold text-white shadow-sm" style="background-color: #DE3B40;">
+                    <button onclick="window.print()" class="btn btn-sm fw-bold text-white shadow-sm" style="background-color: #B86A55;">
                         <i class="bi bi-printer-fill"></i> Imprimir a PDF
                     </button>
                 </div>
@@ -73,7 +74,7 @@
             
             <div class="table-responsive">
                 <table class="table table-hover table-bordered align-middle mb-0">
-                    <thead style="background-color: #18392B; color: white;" class="text-center">
+                    <thead style="background-color: #1D1D1F; color: white;" class="text-center">
                         <tr>
                             <th>Código (SKU)</th>
                             <th>Nombre del Repuesto</th>
@@ -87,7 +88,7 @@
                             <td class="text-center fw-semibold text-muted">{{ p.sku }}</td>
                             <td class="fw-bold">{{ p.nombre }}</td>
                             <td class="small text-muted">{{ p.descripcion or 'Sin descripción' }}</td>
-                            <td class="text-center fs-5 fw-bold" style="color: #18392B;">{{ p.cantidad_historica }}</td>
+                            <td class="text-center fs-5 fw-bold" style="color: #1D1D1F;">{{ p.cantidad_historica }}</td>
                         </tr>
                         {% else %}
                         <tr>

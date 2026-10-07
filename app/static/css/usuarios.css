@@ -1,25 +1,31 @@
-/* Etiquetas de Roles */
-.rol-admin, .rol-bodega, .rol-vendedor {
+/* Roles — etiquetas discretas, estilo macOS */
+.rol-admin,
+.rol-bodega,
+.rol-vendedor {
   display: inline-flex;
   align-items: center;
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  font-weight: 600;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 999px !important;
+  font-size: .79rem;
+  font-weight: 650;
+  border: 1px solid transparent;
 }
 
-/* Colores de roles vinculados a la paleta */
 .rol-admin {
-  background-color: #1C252C !important; /* Azul grafito oscuro */
-  color: white !important;
+  background: #f0efff !important;
+  color: #514fbd !important;
+  border-color: #dad9fa;
 }
 
 .rol-bodega {
-  background-color: #344955 !important; /* Azul acero */
-  color: white !important;
+  background: #e8f2ff !important;
+  color: #1768b8 !important;
+  border-color: #c8e0ff;
 }
 
 .rol-vendedor {
-  background-color: #6B7785 !important; /* Gris acero claro */
-  color: white !important;
+  background: #ecf9ef !important;
+  color: #237a3b !important;
+  border-color: #c9ecd2;
 }

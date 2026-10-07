@@ -11,8 +11,8 @@
             background-color: #F3F5F2 !important; /* Gris hielo industrial */
         }
         .comprobante-card {
-            border-top: 5px solid #18392B;
-            border-bottom: 5px solid #C47A3A;
+            border-top: 5px solid #1D1D1F;
+            border-bottom: 5px solid #7B8088;
             border-radius: 12px;
         }
         @media print {
@@ -21,6 +21,7 @@
             .comprobante-card { border: none !important; box-shadow: none !important; }
         }
     </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mojave-theme.css') }}" />
 </head>
 <body class="d-flex justify-content-center align-items-center min-vh-100 py-4">
     
@@ -29,8 +30,8 @@
         <!-- Cabecera formal estilo documento interno -->
         <div class="text-center mb-3 border-bottom pb-3">
             <div class="d-flex align-items-center justify-content-center gap-2 mb-1">
-                <i class="bi bi-gear-fill fs-3" style="color: #C47A3A;"></i>
-                <h3 class="fw-bold m-0" style="color: #18392B;">Equi-Parts S&S</h3>
+                <i class="bi bi-gear-fill fs-3" style="color: #7B8088;"></i>
+                <h3 class="fw-bold m-0" style="color: #1D1D1F;">Equi-Parts S&S</h3>
             </div>
             <p class="text-muted small m-0">Sistema de Control y Gestión de Repuestos</p>
             <span class="badge bg-dark mt-2">COMPROBANTE DE MOVIMIENTO INTERNO</span>
@@ -58,11 +59,11 @@
             </li>
             <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-0">
                 <span class="text-muted"><i class="bi bi-arrow-left-right me-2"></i>Tipo de Movimiento:</span>
-                <span class="fw-bold px-2 py-1 rounded" style="background-color: #e2e8f0; color: #18392B;">{{ m.tipo }}</span>
+                <span class="fw-bold px-2 py-1 rounded" style="background-color: #e2e8f0; color: #1D1D1F;">{{ m.tipo }}</span>
             </li>
             <li class="list-group-item d-flex justify-content-between align-items-center py-3 px-0 bg-light mt-2 rounded border-start border-4 border-success">
                 <span class="text-muted fw-bold ps-2"><i class="bi bi-boxes me-2"></i>Cantidad Movida:</span>
-                <span class="fw-bold fs-4 pe-2" style="color: #18392B;">{{ m.cantidad }} u.</span>
+                <span class="fw-bold fs-4 pe-2" style="color: #1D1D1F;">{{ m.cantidad }} u.</span>
             </li>
             <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-0 mt-2">
                 <span class="text-muted"><i class="bi bi-person-badge me-2"></i>Registrado por (Responsable):</span>
@@ -77,7 +78,7 @@
 
         <!-- Botones de Acción -->
         <div class="d-flex gap-2 no-print">
-            <button onclick="window.print()" class="btn w-100 fw-bold py-2 text-white shadow-sm" style="background-color: #356859;">
+            <button onclick="window.print()" class="btn w-100 fw-bold py-2 text-white shadow-sm" style="background-color: #5B708D;">
                 <i class="bi bi-printer-fill me-2"></i> Imprimir Comprobante
             </button>
             <a href="{{ url_for('inventario.inventario') }}" class="btn w-100 fw-bold py-2 text-white shadow-sm" style="background-color: #6B7280;">

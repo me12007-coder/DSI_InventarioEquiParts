@@ -7,119 +7,183 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/inventario.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mojave-theme.css') }}" />
 </head>
 <body class="bg-light">
     {% include 'includes/navbar.html' %}
-    
+
     <div class="container mt-4 mb-5">
-        <div class="card shadow-sm mx-auto border-0 rounded-3" style="max-width: 750px;">
-            <div class="card-header fw-semibold" style="background-color: #18392B; color: white;">
-                <i class="bi bi-pencil-square me-2" style="color: #C47A3A;"></i>
-                Editar Ficha del Producto 
-            </div>
-            <div class="card-body p-4">
-                <div class="mb-4 border-bottom pb-3">
-                    <h4 class="fw-bold mb-1" style="color: #18392B;">{{ p.nombre }}</h4>
-                    <span class="badge bg-dark mt-1">
-                        SKU: {{ p.sku }}
-                    </span>
-                    <p class="text-muted mt-2 mb-0 small">
-                        Modifique la información general, existencias, alertas y archivos del producto.
-                    </p>
+        <div class="card shadow-sm mx-auto border-0 rounded-3" style="max-width: 820px;">
+            <div class="card-body p-4 p-lg-5">
+                <div class="d-flex justify-content-between align-items-start gap-3 mb-4 pb-3 border-bottom">
+                    <div class="page-title-row">
+                        <span class="page-title-icon"><i class="bi bi-pencil-square"></i></span>
+                        <div>
+                            <h3 class="fw-bold mb-1">Editar producto</h3>
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <span class="fw-semibold">{{ p.nombre }}</span>
+                                <span class="badge bg-dark">SKU: {{ p.sku }}</span>
+                            </div>
+                            <p class="text-muted mt-1 mb-0 small">Actualiza la información, existencias, ubicación y documentos asociados.</p>
+                        </div>
+                    </div>
+                    <a href="{{ url_for('inventario.inventario') }}" class="btn btn-secondary btn-sm flex-shrink-0">
+                        <i class="bi bi-arrow-left me-1"></i> Volver
+                    </a>
                 </div>
-                
-                <!-- IMPORTANTE: El enctype="multipart/form-data" permite enviar archivos -->
+
                 <form method="POST" enctype="multipart/form-data">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Nombre del Repuesto</label>
-                        <div class="input-group">
-                            <span class="input-group-text">
-                                <i class="bi bi-box-seam"></i>
-                            </span>
-                            <input type="text" name="nombre" class="form-control" value="{{ p.nombre }}" required>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-4">
-                        <label class="form-label fw-semibold">Descripción / Especificaciones</label>
-                        <textarea name="descripcion" class="form-control" rows="3">{{ p.descripcion }}</textarea>
-                    </div>
-
-                    <h6 class="seccion-formulario mt-0">Inventario y Finanzas</h6>
-                    <div class="row mb-4">
-                        <div class="col-md-4 mb-3 mb-md-0">
-                            <label class="form-label fw-semibold small text-muted text-uppercase">Stock Físico</label>
-                            <input type="number" name="cantidad" class="form-control fw-bold fs-5" style="color: #18392B;" value="{{ p.cantidad }}" min="0" required>
-                        </div>
-                        <div class="col-md-4 mb-3 mb-md-0">
-                            <label class="form-label fw-semibold small text-muted text-uppercase">Alerta Mínima <i class="bi bi-info-circle ms-1" title="El sistema alertará cuando llegue a este nivel"></i></label>
-                            <input type="number" name="stock_minimo" class="form-control fw-bold fs-5" style="color: #C47A3A;" value="{{ p.stock_minimo }}" min="1" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold small text-muted text-uppercase">Precio Unitario ($)</label>
-                            <input type="number" name="precio" class="form-control fw-bold fs-5" style="color: #356859;" value="{{ p.precio }}" step="0.01" min="0.01" required>
-                        </div>
-                    </div>
-
-                    <h6 class="seccion-formulario mt-0">Clasificación y Ubicación</h6>
-                    <div class="row mb-4">
-                        <div class="col-md-6 mb-3 mb-md-0">
-                            <label class="form-label fw-semibold">Ubicación en Bodega</label>
-                            <div class="input-group">
-                                <span class="input-group-text">
-                                    <i class="bi bi-geo-alt"></i>
-                                </span>
-                                <input type="text" name="ubicacion" class="form-control" value="{{ p.ubicacion }}">
+                    <section class="form-section section-blue">
+                        <div class="section-heading">
+                            <span class="section-heading-icon"><i class="bi bi-card-list"></i></span>
+                            <div class="section-heading-text">
+                                <strong>Información general</strong>
+                                <small>Datos principales que identifican el repuesto.</small>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Categoría</label>
+
+                        <div class="mb-3">
+                            <label class="field-label form-label"><i class="bi bi-box-seam"></i> Nombre del repuesto</label>
                             <div class="input-group">
-                                <span class="input-group-text">
-                                    <i class="bi bi-tags"></i>
-                                </span>
-                                <select name="categoria_id" class="form-select">
-                                    <option value="">Sin categoría</option>
+                                <span class="input-group-text"><i class="bi bi-box"></i></span>
+                                <input type="text" name="nombre" class="form-control" value="{{ p.nombre }}" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-0">
+                            <label class="field-label form-label"><i class="bi bi-card-text"></i> Descripción / especificaciones</label>
+                            <textarea name="descripcion" class="form-control" rows="3" placeholder="Características, compatibilidad, marca, modelo...">{{ p.descripcion }}</textarea>
+                        </div>
+                    </section>
+
+                    <section class="form-section section-green">
+                        <div class="section-heading">
+                            <span class="section-heading-icon"><i class="bi bi-boxes"></i></span>
+                            <div class="section-heading-text">
+                                <strong>Inventario y finanzas</strong>
+                                <small>Existencias, punto de alerta y precio del producto.</small>
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="metric-input stock h-100">
+                                    <label class="field-label form-label"><i class="bi bi-boxes"></i> Stock físico</label>
+                                    <input type="number" name="cantidad" class="form-control fw-bold fs-5" value="{{ p.cantidad }}" min="0" required>
+                                    <small class="text-muted d-block mt-2"><i class="bi bi-info-circle me-1"></i>Unidades existentes en bodega.</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="metric-input minimum h-100">
+                                    <label class="field-label form-label"><i class="bi bi-bell"></i> Alerta mínima</label>
+                                    <input type="number" name="stock_minimo" class="form-control fw-bold fs-5" value="{{ p.stock_minimo }}" min="1" required>
+                                    <small class="text-muted d-block mt-2"><i class="bi bi-exclamation-circle me-1"></i>Nivel en el que se mostrará aviso.</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="metric-input price h-100">
+                                    <label class="field-label form-label"><i class="bi bi-cash-stack"></i> Precio unitario ($)</label>
+                                    <input type="number" name="precio" class="form-control fw-bold fs-5" value="{{ p.precio }}" step="0.01" min="0.01" required>
+                                    <small class="text-muted d-block mt-2"><i class="bi bi-tag me-1"></i>Precio de venta registrado.</small>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="form-section section-sand">
+                        <div class="section-heading">
+                            <span class="section-heading-icon"><i class="bi bi-geo-alt"></i></span>
+                            <div class="section-heading-text">
+                                <strong>Clasificación y ubicación</strong>
+                                <small>Facilita encontrar la pieza y agruparla correctamente.</small>
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="field-label form-label"><i class="bi bi-signpost-split"></i> Ubicación en bodega</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-geo-alt-fill"></i></span>
+                                    <input type="text" name="ubicacion" class="form-control" value="{{ p.ubicacion }}" placeholder="Ej. Pasillo A - Estante 3">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="field-label form-label"><i class="bi bi-tags"></i> Categoría</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-tag-fill"></i></span>
+                                    <select name="categoria_id" class="form-select">
+                                        <option value="">Sin categoría</option>
                                         {% for c in categorias %}
                                         <option value="{{ c.id }}" {% if p.categoria_id == c.id %}selected{% endif %}>{{ c.nombre }}</option>
                                         {% endfor %}
-                                </select>
+                                    </select>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </section>
 
-                    <h6 class="seccion-formulario mt-0 border-top pt-3">Archivos Adjuntos (Fichas y Fotos)</h6>
-                    <div class="row mb-4">
-                        <div class="col-md-6 mb-3 mb-md-0">
-                            <label class="form-label fw-semibold small text-muted text-uppercase">Fotografía (PNG/JPG)</label>
-                            {% if p.foto %}
-                                <div class="mb-1 small fw-bold" style="color: #356859;">
-                                    <i class="bi bi-image"></i> Archivo actual: {{ p.foto }}
-                                </div>
-                            {% endif %}
-                            <input class="form-control" type="file" name="foto" accept="image/*">
-                            <small class="text-muted" style="font-size: 0.75rem;">Dejar vacío para conservar la foto actual.</small>
+                    <section class="form-section section-lavender mb-0">
+                        <div class="section-heading">
+                            <span class="section-heading-icon"><i class="bi bi-paperclip"></i></span>
+                            <div class="section-heading-text">
+                                <strong>Archivos adjuntos</strong>
+                                <small>Fotografía del repuesto y ficha técnica del fabricante.</small>
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold small text-muted text-uppercase">Ficha Técnica (PDF)</label>
-                            {% if p.ficha_pdf %}
-                                <div class="mb-1 small fw-bold" style="color: #DE3B40;">
-                                    <i class="bi bi-file-earmark-pdf-fill"></i> Archivo actual: {{ p.ficha_pdf }}
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="upload-card photo">
+                                    <div class="upload-card-head">
+                                        <span class="upload-icon"><i class="bi bi-image"></i></span>
+                                        <div>
+                                            <div class="fw-bold">Fotografía del producto</div>
+                                            <small class="text-muted">PNG, JPG o WEBP</small>
+                                        </div>
+                                    </div>
+                                    <div class="upload-current">
+                                        <i class="bi bi-check-circle"></i>
+                                        {% if p.foto %}
+                                          <span><strong>Actual:</strong> {{ p.foto }}</span>
+                                        {% else %}
+                                          <span>No hay fotografía cargada.</span>
+                                        {% endif %}
+                                    </div>
+                                    <input class="form-control" type="file" name="foto" accept="image/*">
+                                    <small class="text-muted d-block mt-2">Déjalo vacío si deseas conservar la imagen actual.</small>
                                 </div>
-                            {% endif %}
-                            <input class="form-control" type="file" name="pdf" accept=".pdf">
-                            <small class="text-muted" style="font-size: 0.75rem;">Dejar vacío para conservar el PDF actual.</small>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="upload-card pdf">
+                                    <div class="upload-card-head">
+                                        <span class="upload-icon"><i class="bi bi-file-earmark-pdf-fill"></i></span>
+                                        <div>
+                                            <div class="fw-bold">Ficha técnica</div>
+                                            <small class="text-muted">Documento PDF oficial</small>
+                                        </div>
+                                    </div>
+                                    <div class="upload-current">
+                                        <i class="bi bi-check-circle"></i>
+                                        {% if p.ficha_pdf %}
+                                          <span><strong>Actual:</strong> {{ p.ficha_pdf }}</span>
+                                        {% else %}
+                                          <span>No hay ficha técnica cargada.</span>
+                                        {% endif %}
+                                    </div>
+                                    <input class="form-control" type="file" name="pdf" accept=".pdf">
+                                    <small class="text-muted d-block mt-2">Déjalo vacío si deseas conservar el PDF actual.</small>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    
+                    </section>
+
                     <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
                         <a href="{{ url_for('inventario.inventario') }}" class="btn btn-secondary px-4 fw-bold">
-                            <i class="bi bi-arrow-left me-1"></i>
-                            Cancelar
+                            <i class="bi bi-x-circle me-1"></i> Cancelar
                         </a>
-                        <button type="submit" class="btn text-white px-4 fw-bold shadow-sm" style="background-color: #356859;">
-                            <i class="bi bi-check-circle me-1"></i>
-                            Guardar Cambios
+                        <button type="submit" class="btn btn-accent-teal px-4 fw-bold">
+                            <i class="bi bi-check-circle me-1"></i> Guardar cambios
                         </button>
                     </div>
                 </form>

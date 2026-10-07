@@ -1,247 +1,162 @@
-/* =====================================================
-   LOGIN - EQUI-PARTS S&S
-   Paleta Verde Industrial + Cobre
-===================================================== */
+/* =========================================================
+   LOGIN — Equi-Parts S&S / Mojave Flat
+   ========================================================= */
 
-/* Página completa */
 body.login-page {
-    margin: 0;
-    padding: 0 !important;
-    min-height: 100vh;
-    background-color: #F3F5F2;
-    overflow: hidden;
+  margin: 0;
+  padding: 0 !important;
+  min-height: 100vh;
+  overflow: hidden;
+  background: #f5f5f7;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
-
-
-/* =====================================================
-   LADO IZQUIERDO - IMAGEN
-===================================================== */
 
 .bg-login-image {
-    position: relative;
-    min-height: 100vh;
-
-    background-image: url("../archivos/Interfaz/Login.png");
-
-    background-size: cover;
-    background-position: left center;
-    background-repeat: no-repeat;
+  position: relative;
+  min-height: 100vh;
+  background-image: linear-gradient(90deg, rgba(16,20,28,.05), rgba(16,20,28,.28)), url("../archivos/Interfaz/Login.png");
+  background-size: cover;
+  background-position: 22% center;
+  background-repeat: no-repeat;
 }
 
+.bg-login-image::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 48%, rgba(0,0,0,.26));
+  pointer-events: none;
+}
 
-/* Texto encima de la imagen */
 .login-overlay {
-    position: absolute;
-    top: 50%;
-    left: 58%;
-    transform: translate(-50%, -50%);
-
-    width: 38%;
-    max-width: 430px;
-
-    z-index: 2;
+  position: absolute;
+  z-index: 2;
+  left: 7%;
+  bottom: 9%;
+  width: min(620px, 72%);
 }
 
 .login-overlay h1 {
-    color: #FFFFFF !important;
-
-    font-size: 2.6rem;
-    font-weight: 700;
-    line-height: 1.15;
-
-    margin: 0;
-
-    text-shadow: 0 3px 12px rgba(0, 0, 0, 0.55);
+  margin: 0;
+  max-width: 590px;
+  color: #fff !important;
+  font-size: clamp(2rem, 3vw, 3.3rem);
+  font-weight: 720;
+  line-height: 1.05;
+  letter-spacing: -.035em;
+  text-wrap: balance;
+  text-shadow: 0 3px 22px rgba(0,0,0,.28);
 }
 
-
-/* Línea cobre debajo del título */
 .login-overlay h1::after {
-    content: "";
-    display: block;
-
-    width: 80px;
-    height: 5px;
-
-    margin-top: 25px;
-
-    background-color: #C47A3A;
-    border-radius: 10px;
+  content: "";
+  display: block;
+  width: 52px;
+  height: 4px;
+  margin-top: 22px;
+  border-radius: 20px;
+  background: #fff;
+  opacity: .82;
 }
-
-
-/* =====================================================
-   LADO DERECHO
-===================================================== */
 
 .login-page .bg-fondo {
-    min-height: 100vh;
-    background-color: #F3F5F2;
+  position: relative;
+  min-height: 100vh;
+  background: #f5f5f7;
 }
-
-
-/* =====================================================
-   TARJETA DEL LOGIN
-===================================================== */
 
 .login-page .card {
-    width: 28rem !important;
-
-    background-color: #FFFFFF !important;
-
-    border: none !important;
-    border-radius: 16px !important;
-
-    box-shadow:
-        0 20px 50px rgba(24, 57, 43, 0.16) !important;
+  width: min(28rem, calc(100vw - 40px)) !important;
+  padding: 2.3rem !important;
+  background: rgba(255,255,255,.93) !important;
+  border: 1px solid rgba(0,0,0,.07) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 20px 55px rgba(0,0,0,.1) !important;
+  backdrop-filter: blur(20px);
 }
-
-
-/* =====================================================
-   LOGO
-===================================================== */
 
 .login-page .logo {
-    text-align: center;
-    font-size: 3.2rem;
-    color: #C47A3A;
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 12px;
+  border-radius: 14px;
+  background: #5b708d;
+  color: #fff;
+  font-size: 1.65rem;
+  box-shadow: 0 8px 18px rgba(91,112,141,.18);
 }
 
-
-/* Título */
 .login-page h3 {
-    color: #202522 !important;
+  color: #1d1d1f !important;
+  letter-spacing: -.02em;
 }
-
-
-/* =====================================================
-   FORMULARIO
-===================================================== */
 
 .login-page .form-label {
-    color: #202522 !important;
-    font-weight: 600;
+  color: #55555a !important;
+  font-size: .84rem;
+  font-weight: 650 !important;
 }
 
-
-/* Inputs */
 .login-page .form-control {
-    height: 48px;
-
-    background-color: #F8FAF9 !important;
-
-    border: 1px solid #D1D5DB;
-    border-radius: 8px;
-
-    color: #202522;
+  min-height: 46px;
+  background: #fff !important;
+  border: 1px solid #cfcfd5 !important;
+  border-radius: 9px;
+  color: #1d1d1f;
 }
 
-
-/* Cuando seleccionamos un input */
 .login-page .form-control:focus {
-    border-color: #356859;
-
-    box-shadow:
-        0 0 0 0.2rem rgba(53, 104, 89, 0.15);
+  border-color: #5b708d !important;
+  box-shadow: 0 0 0 3px rgba(91,112,141,.14) !important;
 }
 
-
-/* Iconos de usuario y contraseña */
 .login-page .input-group-text {
-    min-width: 48px;
-
-    display: flex;
-    justify-content: center;
-    align-items: center;
-
-    background-color: #356859 !important;
-
-    color: #FFFFFF !important;
-
-    border: none;
+  min-width: 46px;
+  justify-content: center;
+  background: #f2f2f7 !important;
+  color: #6a6a70 !important;
+  border: 1px solid #cfcfd5 !important;
 }
-
-
-/* =====================================================
-   BOTÓN MOSTRAR CONTRASEÑA
-===================================================== */
 
 .login-page .btn-outline-secondary {
-    border-color: #D1D5DB;
-
-    color: #6B7280;
+  border-color: #cfcfd5 !important;
+  color: #6a6a70;
 }
 
 .login-page .btn-outline-secondary:hover {
-    background-color: #356859;
-
-    border-color: #356859;
-
-    color: #FFFFFF;
+  background: #f2f2f7 !important;
+  color: #1d1d1f !important;
 }
-
-
-/* =====================================================
-   BOTÓN INICIAR SESIÓN
-===================================================== */
 
 .login-page .btn-primary {
-    min-height: 48px;
-
-    background-color: #18392B !important;
-
-    border-color: #18392B !important;
-
-    color: #FFFFFF !important;
-
-    border-radius: 8px !important;
-
-    font-weight: 700;
-
-    transition: 0.2s ease;
+  min-height: 46px;
+  background: #007aff !important;
+  border-color: #5b708d !important;
+  color: #fff !important;
+  border-radius: 9px !important;
+  font-weight: 650;
+  box-shadow: none !important;
 }
-
 
 .login-page .btn-primary:hover {
-    background-color: #356859 !important;
-
-    border-color: #356859 !important;
-
-    transform: translateY(-1px);
-
-    box-shadow:
-        0 6px 15px rgba(24, 57, 43, 0.25);
+  background: #4B617D !important;
+  border-color: #4B617D !important;
+  transform: translateY(-1px);
 }
-
-
-/* =====================================================
-   MENSAJES / ALERTAS
-===================================================== */
 
 .login-page .alert {
-    border-radius: 8px;
+  border-radius: 9px;
 }
 
-
-/* =====================================================
-   RESPONSIVE
-   En celulares desaparece la imagen y queda el login
-===================================================== */
-
 @media (max-width: 991.98px) {
-
-    body.login-page {
-        overflow: auto;
-    }
-
-    .login-page .bg-fondo {
-        min-height: 100vh;
-        padding: 25px;
-    }
-
-    .login-page .card {
-        width: 100% !important;
-        max-width: 430px;
-        padding: 2rem !important;
-    }
+  body.login-page { overflow: auto; }
+  .login-page .bg-fondo {
+    min-height: 100vh;
+    padding: 26px 18px;
+  }
+  .login-page .card {
+    padding: 2rem !important;
+  }
 }

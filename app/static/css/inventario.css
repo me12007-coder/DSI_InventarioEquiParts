@@ -1,136 +1,48 @@
-/* Fondo general Gris Hielo */
-body, body.bg-light { 
-  background-color: #F3F5F2 !important; 
+/* Estilos específicos del inventario. El tema global vive en mojave-theme.css */
+
+.stock-box {
+  letter-spacing: -.02em;
+  color: #1d1d1f !important;
 }
 
-/* Encabezados de Tarjetas (Verde Medio) */
-.card-header {
-  background-color: #356859 !important; 
-  color: #FFFFFF !important;
-  border-bottom: 3px solid #C47A3A !important;
+.stock-detalle {
+  margin-top: 2px;
+  color: #85858a !important;
+  font-size: .78rem;
 }
 
-/* Tablas Principales */
-.table thead th, .table-dark th {
-  background-color: #18392B !important; 
-  color: #FFFFFF !important;
-  border-bottom: 2px solid #C47A3A !important;
+.seccion-formulario {
+  margin: 1rem 0 .75rem;
+  padding-bottom: .5rem;
+  border-bottom: 1px solid #ececf0;
+  font-size: .86rem;
+  font-weight: 700;
+  color: #1d1d1f !important;
 }
 
-/* ---------------------------------------------------
-   BOTONES ESTILO INDUSTRIAL MATE
------------------------------------------------------- */
-.btn {
-  border-radius: 6px !important;
-  font-weight: 600 !important;
-  border: none !important;
-  transition: all 0.2s ease-in-out;
-}
-
-/* Botón "Ver" / Acción Principal (Verde Oscuro) */
-.btn-primary, .btn-info, .bg-primary {
-  background-color: #18392B !important;
-  color: #FFFFFF !important;
-}
-.btn-primary:hover, .btn-info:hover {
-  background-color: #10261d !important;
-}
-
-/* Botón "Editar" / Acento (Cobre/Ámbar) */
-.btn-warning, .bg-warning {
-  background-color: #C47A3A !important;
-  color: #202522 !important; /* Texto oscuro para mejor lectura */
-}
-.btn-warning:hover {
-  background-color: #a6652e !important;
-}
-
-/* Botón "Eliminar" (Rojo Mate) */
-.btn-danger, .bg-danger {
-  background-color: #DE3B40 !important;
-  color: #FFFFFF !important;
-}
-.btn-danger:hover { 
-  background-color: #b82d32 !important; 
-}
-
-/* Botón Secundario "Limpiar" (Gris Acero) */
-.btn-secondary, .btn-dark {
-  background-color: #6B7280 !important;
-  color: #FFFFFF !important;
-}
-.btn-secondary:hover, .btn-dark:hover {
-  background-color: #4b5563 !important;
-}
-
-/* Botón Guardar / Nuevo Producto (Verde Medio) */
-.btn-success, .bg-success {
-  background-color: #356859 !important;
-  color: #FFFFFF !important;
-}
-.btn-success:hover {
-  background-color: #264a40 !important;
-}
-
-/* ---------------------------------------------------
-   INDICADORES DE ESTADO (PASTILLAS CON PUNTO)
------------------------------------------------------- */
+/* Indicadores de stock */
 .estado-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 12px;
-  border-radius: 50rem;
-  font-weight: 700;
-  font-size: 0.85rem;
+  gap: 7px;
+  padding: 6px 11px;
+  border-radius: 999px;
+  font-size: .82rem;
+  font-weight: 650;
 }
 
 .estado-pill::before {
   content: "";
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
 }
 
-/* Estado: Disponible */
-.estado-disponible {
-  background-color: #DCFCE7 !important; /* Fondo verde muy claro */
-  color: #166534 !important; /* Texto verde oscuro */
-}
-.estado-disponible::before { background-color: #22C55E; }
+.estado-disponible { background: #ecf9ef !important; color: #237a3b !important; }
+.estado-disponible::before { background: #34c759; }
 
-/* Estado: Stock Bajo */
-.estado-bajo {
-  background-color: #FEF3C7 !important;
-  color: #92400E !important;
-}
-.estado-bajo::before { background-color: #F59E0B; }
+.estado-bajo { background: #fff6e8 !important; color: #9a5a00 !important; }
+.estado-bajo::before { background: #ff9f0a; }
 
-/* Estado: Sin Stock */
-.estado-sinstock {
-  background-color: #FEE2E2 !important;
-  color: #991B1B !important;
-}
-.estado-sinstock::before { background-color: #EF4444; }
-
-
-/* Textos y Formularios */
-.text-muted, .form-label, .stock-detalle {
-  color: #6B7280 !important;
-  font-weight: 600;
-}
-
-h1, h2, h3, h4, h5, h6, .card-title, .seccion-formulario {
-   color: #202522 !important; 
-}
-
-.form-control, .form-select {
-  border-radius: 8px; 
-  border: 1px solid #d1d5db; 
-}
-
-.input-group-text { 
-  background-color: #356859 !important; 
-  color: white !important; 
-  border: none; 
-}
+.estado-sinstock { background: #fff0ef !important; color: #c83028 !important; }
+.estado-sinstock::before { background: #ff3b30; }

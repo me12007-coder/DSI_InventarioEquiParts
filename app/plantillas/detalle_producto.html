@@ -16,19 +16,22 @@
     </style>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/inventario.css') }}" />
-  </head>
+      <link rel="stylesheet" href="{{ url_for('static', filename='css/mojave-theme.css') }}" />
+</head>
   <body class="bg-light">
     {% include 'includes/navbar.html' %}
     <div class="container">
-      <div class="d-flex justify-content-between align-items-center mb-4 esconder-impresion">
+      <div class="d-flex justify-content-between align-items-center mb-4 mt-3 esconder-impresion">
         <div>
-          <h2 class="fw-bold mb-1" style="color: #18392B;">
-            <i class="bi bi-box-seam me-2"></i>
-            Ficha del Producto
-          </h2>
-          <p class="text-muted mb-0">Información general y movimientos de inventario.</p>
+          <div class="page-title-row">
+            <span class="page-title-icon"><i class="bi bi-box-seam"></i></span>
+            <div>
+              <h2 class="fw-bold mb-1">Ficha del Producto</h2>
+              <p class="text-muted mb-0">Información general y movimientos de inventario.</p>
+            </div>
+          </div>
         </div>
-        <a href="{{ url_for('inventario.inventario') }}" class="btn btn-secondary">
+        <a href="{{ url_for('inventario.inventario') }}" class="btn btn-secondary shadow-sm">
           <i class="bi bi-arrow-left me-1"></i> Volver
         </a>
       </div>
@@ -36,20 +39,20 @@
       {% with messages = get_flashed_messages(with_categories=true) %} 
         {% if messages %} 
           {% for category, message in messages %}
-          <div class="alert alert-{{ category }}">{{ message }}</div>
+          <div class="alert alert-{{ category }} shadow-sm">{{ message }}</div>
           {% endfor %} 
         {% endif %} 
       {% endwith %}
 
-      <div class="row">
+      <div class="row mb-4">
         <div class="col-md-7">
-          <div class="card shadow text-dark bg-white mb-4">
+          <div class="card shadow-sm text-dark bg-white h-100 border-0 rounded-3">
             <div class="card-body row">
-              <div class="col-md-5 text-center mb-3 mb-md-0">
+              <div class="col-md-5 text-center mb-3 mb-md-0 d-flex flex-column justify-content-center">
                 {% if p.foto %}
-                <img src="{{ url_for('static', filename='archivos/' ~ p.foto) }}" class="img-fluid rounded border shadow-sm" style="max-height: 230px; object-fit: cover;" />
+                <img src="{{ url_for('static', filename='archivos/' ~ p.foto) }}" class="img-fluid rounded border shadow-sm w-100" style="max-height: 250px; object-fit: cover;" />
                 {% else %}
-                <div class="bg-light text-muted border rounded d-flex flex-column align-items-center justify-content-center" style="height: 200px;">
+                <div class="bg-light text-muted border rounded d-flex flex-column align-items-center justify-content-center w-100" style="height: 200px;">
                   <i class="bi bi-image display-4 mb-2"></i>
                   <span>Sin fotografía</span>
                 </div>
@@ -58,37 +61,35 @@
               <div class="col-md-7">
                 <div class="d-flex align-items-center mb-2 flex-wrap gap-2">
                   <span class="badge bg-dark">SKU: {{ p.sku }}</span>
-                  <!-- Lógica de Pastilla de Estado -->
                   {% set stock_real = p.cantidad - p.stock_reservado %}
                   {% if stock_real <= 0 %}
-                    <span class="estado-pill estado-sinstock">Sin stock</span>
+                    <span class="estado-pill border border-danger text-danger bg-danger bg-opacity-10 px-2 py-1 rounded small fw-bold">Sin stock</span>
                   {% elif stock_real <= (p.stock_minimo | default(5)) %}
-                    <span class="estado-pill estado-bajo">Stock bajo</span>
+                    <span class="estado-pill border border-warning text-dark bg-warning bg-opacity-10 px-2 py-1 rounded small fw-bold">Stock bajo</span>
                   {% else %}
-                    <span class="estado-pill estado-disponible">Disponible</span>
+                    <span class="estado-pill border border-success text-success bg-success bg-opacity-10 px-2 py-1 rounded small fw-bold">Disponible</span>
                   {% endif %}
                 </div>
                 
-                <h3 class="fw-bold mb-1" style="color: #18392B;">{{ p.nombre }}</h3>
+                <h3 class="fw-bold mb-1" style="color: #1D1D1F;">{{ p.nombre }}</h3>
                 <p class="text-muted small mb-3"><i class="bi bi-tag"></i> {{ p.categoria_nombre or 'Sin categoría' }}</p>
                 <p class="mb-3">{{ p.descripcion or 'Sin descripción disponible.' }}</p>
                
-                <div class="d-flex gap-3 mb-4 mt-4 text-center flex-wrap">
-                  <!-- Tarjeta de Stock Físico -->
-                  <div class="flex-fill p-3 rounded-4 bg-white border shadow-sm">
-                    <span class="d-block text-muted small fw-bold text-uppercase mb-1">
-                      <i class="bi bi-boxes"></i> Stock Físico
-                    </span>
-                    <span class="fs-2 fw-bold" style="color: #18392B;">{{ p.cantidad }}</span>
-                    <small class="text-muted">unidades</small>
+                <div class="d-flex gap-2 mb-4 mt-4 text-center flex-wrap">
+                  <div class="flex-fill stock-summary-card stock-physical rounded-3">
+                    <span class="metric-icon"><i class="bi bi-boxes"></i></span>
+                    <span class="d-block text-muted small fw-bold text-uppercase mb-1">Físico</span>
+                    <span class="fs-3 fw-bold">{{ p.cantidad }}</span>
                   </div>
-                  <!-- Tarjeta de Reservas -->
-                  <div class="flex-fill p-3 rounded-4 bg-white border shadow-sm">
-                    <span class="d-block text-muted small fw-bold text-uppercase mb-1">
-                      <i class="bi bi-bookmark-check"></i> Reservas
-                    </span>
-                    <span class="fs-2 fw-bold" style="color: #C47A3A;">{{ p.stock_reservado }}</span>
-                    <small class="text-muted">unidades</small>
+                  <div class="flex-fill stock-summary-card stock-reserved rounded-3">
+                    <span class="metric-icon"><i class="bi bi-bookmark-check"></i></span>
+                    <span class="d-block text-muted small fw-bold text-uppercase mb-1">Reserva</span>
+                    <span class="fs-3 fw-bold">{{ p.stock_reservado }}</span>
+                  </div>
+                  <div class="flex-fill stock-summary-card stock-loss rounded-3">
+                    <span class="metric-icon"><i class="bi bi-exclamation-triangle"></i></span>
+                    <span class="d-block text-muted small fw-bold text-uppercase mb-1">En mermas</span>
+                    <span class="fs-3 fw-bold">{{ total_dañados }}</span>
                   </div>
                 </div>
 
@@ -99,71 +100,144 @@
                   </div>
                   <div class="col-6 border-start ps-3">
                     <small class="text-muted fw-bold d-block mb-1">Precio Venta</small>
-                    <span class="fw-bold fs-5" style="color: #356859;">${{ "%.2f"|format(p.precio) }}</span>
+                    <span class="fw-bold fs-5" style="color: #5f8f88;">${{ "%.2f"|format(p.precio) }}</span>
                   </div>
                 </div>
 
-
                 {% if p.ficha_pdf %}
-                <a href="{{ url_for('static', filename='archivos/' ~ p.ficha_pdf) }}" target="_blank" class="btn btn-danger btn-sm mt-3 w-100 esconder-impresion">
+                <a href="{{ url_for('static', filename='archivos/' ~ p.ficha_pdf) }}" target="_blank" class="btn btn-document btn-sm mt-3 w-100 esconder-impresion fw-bold">
                   <i class="bi bi-file-earmark-pdf-fill me-1"></i> Ver Ficha Técnica Oficial (PDF)
                 </a>
                 {% endif %}
               </div>
             </div>
           </div>
-          
-          <div class="card shadow mt-4">
-            <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
-              <div><i class="bi bi-clock-history me-1"></i> Trazabilidad Completa de Operaciones</div>
+        </div>
+
+        <div class="col-md-5">
+          <div class="card shadow-sm border-0 rounded-3 h-100">
+            <div class="card-header bg-white border-bottom py-3 fw-semibold" style="color: #1D1D1F;">
+              <i class="bi bi-arrow-left-right me-2" style="color: #7B8088;"></i> Módulo de Transacciones
+            </div>
+            <div class="card-body">
+            <form id="formTransaccion" action="{{ url_for('inventario.detalle_producto', id=p.id) }}" method="POST">                
+                <label class="form-label fw-semibold text-muted small text-uppercase"><i class="bi bi-gear-wide-connected"></i> Tipo de Operación</label>
+                <div class="mb-3">
+                  <select name="tipo_movimiento" id="tipoMovimiento" class="form-select border-secondary" required>
+                    <option value="Salida">Venta Directa (Factura/Ticket)</option>
+                    <option value="Cotizacion">Crear Reserva (Cotización)</option>
+                    <option value="Venta_Cotizacion">Despachar Reserva Activa</option>
+                    {% if session['rol'] in ['Administrador', 'Bodeguero'] %}
+                    <option value="Entrada">Ingreso a Bodega (Abastecimiento)</option>
+                    {% endif %}
+                    {% if session['rol'] == 'Administrador' %}
+                    <option value="Devolucion" class="text-primary fw-bold">Devolución de Cliente</option>
+                    <option value="Ajuste" class="text-warning fw-bold">Ajuste manual (Conciliación)</option>
+                    <option value="Mermar" class="text-danger fw-bold">Trasladar pieza Dañada a Mermas</option>
+                    <option value="Baja" class="text-dark fw-bold">Destruir pieza desde Mermas</option>
+                    {% endif %}
+                  </select> 
+                </div>
+
+                <div id="cajaJustificacion" class="mb-3 bg-light p-3 rounded border" style="display: none;">
+                  <label class="form-label fw-semibold text-danger small text-uppercase" id="labelJustificacion"><i class="bi bi-exclamation-triangle"></i> Justificación</label>
+                  <textarea name="justificacion" id="inputJustificacion" class="form-control" rows="2" placeholder="Ej. Pérdida, robo, conteo físico erróneo..."></textarea>
+                </div>
+                
+                <div id="cajaDevolucion" class="mb-3 bg-light p-3 rounded border border-primary" style="display: none;">
+                  <label class="form-label fw-semibold text-primary small text-uppercase">Estado de la Pieza</label>
+                  <select name="estado_devolucion" id="estadoDevolucion" class="form-select mb-2">
+                      <option value="Bueno">✔️ Buen Estado (Retorna al stock)</option>
+                      <option value="Dañado">❌ Dañada (Se envía a Mermas)</option>
+                  </select>
+                  <label class="form-label fw-semibold text-secondary small text-uppercase mt-2"><i class="bi bi-arrow-return-left"></i> Motivo de Devolución</label>
+                  <input type="text" name="motivo_devolucion" id="inputMotivoDev" class="form-control mb-2" placeholder="Ej. Pieza defectuosa, Error en despacho">
+                  
+                  <label class="form-label fw-semibold text-secondary small text-uppercase mt-2"><i class="bi bi-receipt"></i> Factura Original</label>
+                  <input type="text" name="referencia_venta" id="inputRefDev" class="form-control" placeholder="Ej. Factura #12345">
+                </div>
+
+                <div class="card bg-light border-0 mb-3 rounded-3" id="cajaInfo">
+                  <div class="card-body py-2 px-3 small text-muted">
+                    <div class="mb-2"><i class="bi bi-file-earmark-text text-warning me-2"></i><strong>Reserva:</strong> Congela temporalmente.</div>
+                    <div class="mb-2"><i class="bi bi-cart-check text-primary me-2"></i><strong>Venta Directa:</strong> Descuenta sin cotizar.</div>
+                    <div><i class="bi bi-box-arrow-in-down text-success me-2"></i><strong>Ingreso:</strong> Aumenta existencias.</div>
+                  </div>
+                </div>
+
+                <label class="form-label fw-semibold text-muted small text-uppercase" id="labelCantidad"><i class="bi bi-handbag"></i> Cantidad</label>
+                <div class="input-group mb-4">
+                  <span class="input-group-text bg-white"><i class="bi bi-boxes" style="color: #1D1D1F;"></i></span>
+                  <input type="number" name="cantidad" class="form-control fw-bold fs-5" placeholder="0" min="0" required style="color: #1D1D1F;"/>
+                </div>
+                <button type="submit" class="btn btn-accent-teal w-100 fw-bold py-2">
+                  <i class="bi bi-check-circle me-2"></i> Procesar Transacción
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-7">
+          <div class="card shadow-sm border-0 rounded-3 h-100">
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+              <div class="fw-semibold" style="color: #1D1D1F;"><i class="bi bi-clock-history me-2" style="color: #7B8088;"></i> Trazabilidad de Operaciones</div>
               <div class="d-flex gap-2">
-                <a href="{{ url_for('inventario.exportar_trazabilidad_csv', id=p.id) }}" class="btn btn-success btn-sm fw-bold esconder-impresion">
+                <a href="{{ url_for('inventario.exportar_trazabilidad_csv', id=p.id) }}" class="btn btn-export btn-sm fw-bold esconder-impresion">
                   <i class="bi bi-file-earmark-excel-fill"></i> CSV
                 </a>
-                <button onclick="window.print()" class="btn btn-danger btn-sm fw-bold esconder-impresion">
+                <button onclick="window.print()" class="btn btn-document btn-sm fw-bold esconder-impresion">
                   <i class="bi bi-printer-fill"></i> PDF
                 </button>
               </div>
             </div>
             <div class="card-body p-0 table-responsive">
-              <table class="table table-striped align-middle mb-0" style="font-size: 0.9em;">
-                <thead class="table-dark">
+              <table class="table table-hover align-middle mb-0" style="font-size: 0.9em;">
+                <thead style="background-color: #f8f9fa;">
                   <tr>
-                    <th>Fecha</th>
-                    <th>Operario</th>
-                    <th>Movimiento</th>
-                    <th class="text-center">Cant.</th>
-                    <th class="text-center esconder-impresion">Acción</th>
+                    <th class="ps-3 text-secondary">Fecha</th>
+                    <th class="text-secondary">Operario</th>
+                    <th class="text-secondary">Movimiento</th>
+                    <th class="text-center text-secondary">Cant.</th>
+                    <th class="text-center esconder-impresion text-secondary">Comp.</th>
                   </tr>
                 </thead>
                 <tbody>
                   {% for m in movimientos %}
                   <tr>
-                    <td>{{ m.fecha }}</td>
-                    <td>{{ m.username }}</td>
+                    <td class="ps-3 text-muted">{{ m.fecha.strftime('%Y-%m-%d %H:%M') if m.fecha else m.fecha }}</td>
+                    <td class="text-muted"><i class="bi bi-person-fill"></i> {{ m.username }}</td>
                     <td>
-                      {% if m.tipo == 'Entrada' %}
-                      <span class="badge bg-success"><i class="bi bi-box-arrow-in-down me-1"></i>Ingreso</span>
-                      {% elif m.tipo == 'Salida' %}
-                      <span class="badge bg-danger"><i class="bi bi-cart-check me-1"></i>Venta Directa</span>
-                      {% elif m.tipo == 'Cotizacion' %}
-                      <span class="badge bg-warning text-dark"><i class="bi bi-file-earmark-text me-1"></i>Reserva</span>
-                      {% elif m.tipo == 'Venta_Cotizacion' %}
-                      <span class="badge bg-info text-dark"><i class="bi bi-check2-circle me-1"></i>Despacho Reserva</span>
+                      {% if 'Traslado a Mermas' in m.tipo %}
+                      <span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-2 py-1"><i class="bi bi-exclamation-triangle me-1"></i>{{ m.tipo }}</span>
+                      {% elif 'Destrucción de Merma' in m.tipo %}
+                      <span class="badge bg-dark bg-opacity-10 text-dark border border-dark px-2 py-1"><i class="bi bi-trash-fill me-1"></i>{{ m.tipo }}</span>
+                      {% elif 'Dañado' in m.tipo %}
+                      <span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-2 py-1"><i class="bi bi-x-circle me-1"></i>{{ m.tipo }}</span>
+                      {% elif 'Entrada' in m.tipo or 'Devolución' in m.tipo %}
+                      <span class="badge bg-success bg-opacity-10 text-success border border-success px-2 py-1"><i class="bi bi-arrow-down-left me-1"></i>{{ m.tipo }}</span>
+                      {% elif 'Salida' in m.tipo or 'Venta' in m.tipo %}
+                      <span class="badge bg-primary bg-opacity-10 text-primary border border-primary px-2 py-1"><i class="bi bi-arrow-up-right me-1"></i>{{ m.tipo }}</span>
+                      {% elif 'Cotizacion' in m.tipo %}
+                      <span class="badge bg-warning bg-opacity-10 text-dark border border-warning px-2 py-1"><i class="bi bi-bookmark me-1"></i>Reserva</span>
+                      {% elif 'Ajuste' in m.tipo %}
+                      <span class="badge bg-warning bg-opacity-10 text-warning border border-warning px-2 py-1"><i class="bi bi-calculator me-1"></i>{{ m.tipo }}</span>
                       {% else %}
-                      <span class="badge bg-secondary">{{ m.tipo }}</span>
+                      <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary px-2 py-1">{{ m.tipo }}</span>
                       {% endif %}
                     </td>
-                    <td class="text-center fw-bold">{{ m.cantidad }}</td>
+                    <td class="text-center fw-bold" style="color: #1D1D1F;">{{ m.cantidad }}</td>
                     <td class="text-center esconder-impresion">
-                      <a href="{{ url_for('inventario.comprobante', mov_id=m.id) }}" target="_blank" class="btn btn-sm btn-secondary py-0">
-                        <i class="bi bi-printer"></i>
+                      <a href="{{ url_for('inventario.comprobante', mov_id=m.id) }}" target="_blank" class="btn btn-sm btn-outline-secondary" title="Imprimir Ticket">
+                        <i class="bi bi-receipt"></i>
                       </a>
                     </td>
                   </tr>
                   {% else %}
                   <tr>
-                    <td colspan="5" class="text-center py-3 text-muted">Este repuesto no registra movimientos aún.</td>
+                    <td colspan="5" class="text-center py-5 text-muted">Este repuesto no registra movimientos aún.</td>
                   </tr>
                   {% endfor %}
                 </tbody>
@@ -172,83 +246,41 @@
           </div>
         </div>
 
-        <div class="col-md-5">
-          <div class="card shadow">
-            <div class="card-header fw-semibold">
-              <i class="bi bi-arrow-left-right me-2"></i> Módulo de Transacciones
+        <div class="col-md-5 mt-4 mt-md-0">
+          <div class="card shadow-sm border-0 rounded-3 h-100 esconder-impresion">
+            <div class="card-header bg-white border-bottom py-3 fw-semibold" style="color: #1D1D1F;">
+              <i class="bi bi-graph-up me-2" style="color: #7B8088;"></i> Ventas vs Daños (30 días)
             </div>
-            <div class="card-body">
-            <form id="formTransaccion" action="{{ url_for('inventario.detalle_producto', id=p.id) }}" method="POST">                
-                <label class="form-label fw-semibold"><i class="bi bi-gear-wide-connected"></i> Tipo de Operación</label>
-                <div class="mb-3">
-                  <select name="tipo_movimiento" id="tipoMovimiento" class="form-select" required>
-                    <option value="Salida">Venta Directa (Factura/Ticket)</option>
-                    <option value="Cotizacion">Crear Reserva (Cotización Temporaria)</option>
-                    <option value="Venta_Cotizacion">Procesar/Despachar Reserva Activa</option>
-                    {% if session['rol'] in ['Administrador', 'Bodeguero'] %}
-                    <option value="Entrada">Ingreso a Bodega (Abastecimiento)</option>
-                    {% endif %}
-                    {% if session['rol'] == 'Administrador' %}
-                    <option value="Ajuste" class="bg-danger text-white">Ajuste manual (Conciliación/Pérdida)</option>
-                    <option value="Devolucion" class="bg-secondary text-white">Devolución de Cliente</option>
-                    {% endif %}
-                  </select> 
-                </div>
-
-                <div id="cajaJustificacion" class="mb-3" style="display: none;">
-                  <label class="form-label fw-semibold text-danger"><i class="bi bi-exclamation-triangle"></i> Justificación del Ajuste</label>
-                  <textarea name="justificacion" id="inputJustificacion" class="form-control" rows="2" placeholder="Ej. Pérdida, robo, conteo físico erróneo..."></textarea>
-                  <small class="text-muted">Obligatorio para ajustes de inventario.</small>
-                </div>
-                <div id="cajaDevolucion" class="mb-3" style="display: none;">
-                  <label class="form-label fw-semibold text-secondary"><i class="bi bi-arrow-return-left"></i> Motivo de Devolución</label>
-                  <input type="text" name="motivo_devolucion" id="inputMotivoDev" class="form-control mb-2" placeholder="Ej. Pieza defectuosa, Error en despacho">
-                  
-                  <label class="form-label fw-semibold text-secondary"><i class="bi bi-receipt"></i> Referencia Venta Original</label>
-                  <input type="text" name="referencia_venta" id="inputRefDev" class="form-control" placeholder="Ej. Factura #12345">
-                </div>
-
-                <div class="card bg-white border mb-3 shadow-sm">
-                  <div class="card-body py-2 px-3 small text-muted">
-                    <div class="mb-2"><i class="bi bi-file-earmark-text text-warning me-2"></i><strong>Crear Reserva:</strong> Congela stock temporalmente para la venta.</div>
-                    <div class="mb-2"><i class="bi bi-cart-check text-success me-2"></i><strong>Venta Directa:</strong> Descuenta inventario sin cotizar.</div>
-                    <div><i class="bi bi-box-arrow-in-down text-dark me-2"></i><strong>Ingreso a Bodega:</strong> Aumenta existencias del producto.</div>
-                  </div>
-                </div>
-
-                <label class="form-label fw-semibold" id="labelCantidad"><i class="bi bi-handbag"></i> Cantidad</label>
-                <div class="input-group mb-3">
-                  <span class="input-group-text"><i class="bi bi-boxes"></i></span>
-                  <input type="number" name="cantidad" class="form-control" placeholder="Cantidad de piezas" min="0" required/>
-                </div>
-                <button type="submit" class="btn btn-success w-100">
-                  <i class="bi bi-check-circle me-2"></i> Procesar Transacción
-                </button>
-              </form>
+            <div class="card-body d-flex align-items-center justify-content-center p-4">
+              <canvas id="graficoTendencia" style="width: 100%; max-height: 250px;"></canvas>
             </div>
           </div>
         </div>
+
       </div>
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <script>
       document.addEventListener("DOMContentLoaded", function() {
         const form = document.getElementById('formTransaccion');
         const selectOperacion = document.getElementById('tipoMovimiento');
-        
         const cajaJustificacion = document.getElementById('cajaJustificacion');
         const inputJustificacion = document.getElementById('inputJustificacion');
-        
+        const labelJustificacion = document.getElementById('labelJustificacion');
         const cajaDevolucion = document.getElementById('cajaDevolucion');
         const inputMotivoDev = document.getElementById('inputMotivoDev');
         const inputRefDev = document.getElementById('inputRefDev');
-        
+        const estadoDevolucion = document.getElementById('estadoDevolucion');
         const labelCantidad = document.getElementById('labelCantidad');
         const inputCantidad = document.querySelector('input[name="cantidad"]');
+        const cajaInfo = document.getElementById('cajaInfo');
 
         const stockFisicoActual = parseInt("{{ p.cantidad }}");
         const stockReservadoActual = parseInt("{{ p.stock_reservado }}");
+        const mermasActuales = parseInt("{{ total_dañados }}");
 
         selectOperacion.addEventListener('change', function() {
           cajaJustificacion.style.display = 'none';
@@ -256,13 +288,29 @@
           cajaDevolucion.style.display = 'none';
           inputMotivoDev.required = false;
           inputRefDev.required = false;
+          cajaInfo.style.display = 'block';
 
           if (this.value === 'Ajuste') {
             cajaJustificacion.style.display = 'block';
             inputJustificacion.required = true;
-            labelCantidad.innerHTML = '<i class="bi bi-calculator text-danger"></i> Nuevo Stock Total Físico';
+            cajaInfo.style.display = 'none';
+            labelJustificacion.innerHTML = '<i class="bi bi-calculator"></i> Justificación de Ajuste';
+            labelCantidad.innerHTML = '<i class="bi bi-calculator text-warning"></i> Nuevo Stock Total Físico';
+          } else if (this.value === 'Mermar') {
+            cajaJustificacion.style.display = 'block';
+            inputJustificacion.required = true;
+            cajaInfo.style.display = 'none';
+            labelJustificacion.innerHTML = '<i class="bi bi-exclamation-triangle"></i> ¿Por qué se daña la pieza?';
+            labelCantidad.innerHTML = '<i class="bi bi-exclamation-triangle text-danger"></i> Cantidad a Mermar';
+          } else if (this.value === 'Baja') {
+            cajaJustificacion.style.display = 'block';
+            inputJustificacion.required = true;
+            cajaInfo.style.display = 'none';
+            labelJustificacion.innerHTML = '<i class="bi bi-trash-fill"></i> Confirmar Destrucción';
+            labelCantidad.innerHTML = '<i class="bi bi-trash text-dark"></i> Cantidad a Destruir';
           } else if (this.value === 'Devolucion') {
             cajaDevolucion.style.display = 'block';
+            cajaInfo.style.display = 'none';
             inputMotivoDev.required = true;
             inputRefDev.required = true;
             labelCantidad.innerHTML = '<i class="bi bi-handbag"></i> Cantidad devuelta';
@@ -311,6 +359,21 @@
                 nuevoFisico += cantidad;
                 textoConfirmacion = `Vas a ingresar <b>${cantidad} u.</b> a la bodega.<br>El Stock Físico subirá de ${stockFisicoActual} a <b class="text-success">${nuevoFisico}</b>.`;
             }
+            else if (tipo === 'Mermar') {
+                if ((stockFisicoActual - stockReservadoActual) < cantidad) {
+                    Swal.fire('Operación Inválida', 'No hay suficiente stock para mermar.', 'error');
+                    return;
+                }
+                nuevoFisico -= cantidad;
+                textoConfirmacion = `Vas a trasladar <b>${cantidad} u.</b> a MERMAS.<br>El Stock Físico bajará de ${stockFisicoActual} a <b class="text-danger">${nuevoFisico}</b>.<br><br><b>Motivo:</b> "${inputJustificacion.value}"`;
+            }
+            else if (tipo === 'Baja') {
+                if (cantidad > mermasActuales) {
+                    Swal.fire('Operación Inválida', `Solo tienes ${mermasActuales} piezas en Mermas. No puedes destruir ${cantidad}.`, 'error');
+                    return;
+                }
+                textoConfirmacion = `Vas a <b>DESTRUIR ${cantidad} u.</b> de la bodega de Mermas.<br>Esto eliminará las piezas del sistema de forma permanente.<br><br><b>Justificación:</b> "${inputJustificacion.value}"`;
+            }
             else if (tipo === 'Ajuste') {
                 nuevoFisico = cantidad;
                 const diferencia = cantidad - stockFisicoActual;
@@ -322,12 +385,17 @@
                 textoConfirmacion = `Físicamente hay <b>${cantidad} u.</b> (${movText} u. en sistema).<br><br><b>Justificación:</b> "${inputJustificacion.value}"`;
             }
             else if (tipo === 'Devolucion') {
-                nuevoFisico += cantidad;
                 if(!inputMotivoDev.value.trim() || !inputRefDev.value.trim()) {
                     Swal.fire('Falta Información', 'El motivo y la referencia son obligatorios para registrar la devolución.', 'warning');
                     return;
                 }
-                textoConfirmacion = `Vas a reingresar <b>${cantidad} u.</b> devueltas por el cliente.<br>El Stock Físico subirá de ${stockFisicoActual} a <b class="text-success">${nuevoFisico}</b>.<br><br><b>Motivo:</b> ${inputMotivoDev.value}<br><b>Ref Venta:</b> ${inputRefDev.value}`;
+                
+                if (estadoDevolucion.value === 'Bueno') {
+                    nuevoFisico += cantidad;
+                    textoConfirmacion = `Vas a reingresar <b>${cantidad} u.</b> en BUEN ESTADO.<br>El Stock Físico subirá a <b class="text-success">${nuevoFisico}</b>.`;
+                } else {
+                    textoConfirmacion = `Vas a registrar <b>${cantidad} u.</b> como DAÑADAS.<br>La pieza se enviará directo a Mermas y el Stock Físico <b class="text-danger">se mantendrá en ${stockFisicoActual}</b>.`;
+                }
             }
 
             Swal.fire({
@@ -335,7 +403,7 @@
                 html: textoConfirmacion,
                 icon: 'question',
                 showCancelButton: true,
-                confirmButtonColor: '#356859',
+                confirmButtonColor: '#5f7494',
                 cancelButtonColor: '#6B7280',
                 confirmButtonText: 'Sí, registrar',
                 cancelButtonText: 'Cancelar',
@@ -346,6 +414,55 @@
                 }
             });
         });
+
+        const canvas = document.getElementById('graficoTendencia');
+        const fechas = {{ fechas_chart | default('[]') | tojson | safe }};
+        const ventas = {{ ventas_chart | default('[]') | tojson | safe }};
+        const mermas = {{ mermas_chart | default('[]') | tojson | safe }};
+        
+        if(fechas.length === 0) {
+            canvas.parentElement.innerHTML = '<div class="text-center w-100 text-muted py-4"><i class="bi bi-bar-chart fs-1 d-block mb-2 text-light"></i><span class="small">No hay datos de operaciones recientes.</span></div>';
+        } else {
+            new Chart(canvas.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: fechas,
+                    datasets: [
+                        {
+                            label: 'Ventas / Despachos',
+                            data: ventas,
+                            borderColor: '#5f8f88',
+                            backgroundColor: 'rgba(53, 104, 89, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3,
+                            pointBackgroundColor: '#5f8f88'
+                        },
+                        {
+                            label: 'Mermas / Daños',
+                            data: mermas,
+                            borderColor: '#c4775d',
+                            backgroundColor: 'rgba(222, 59, 64, 0.1)',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            fill: true,
+                            tension: 0.3,
+                            pointBackgroundColor: '#c4775d'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8 } }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                    }
+                }
+            });
+        }
       });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

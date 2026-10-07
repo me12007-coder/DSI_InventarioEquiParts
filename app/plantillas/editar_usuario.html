@@ -7,15 +7,13 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/inventario.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mojave-theme.css') }}" />
 </head>
 <body class="bg-light">
   {% include 'includes/navbar.html' %}
     <div class="container mt-5">
         <div class="card shadow mx-auto" style="max-width: 600px;">
-            <div class="card-header bg-warning text-dark fw-semibold">
-                <i class="bi bi-person-gear me-2"></i>
-                Editar Usuario
-            </div>
+            <div class="card-header d-flex align-items-center gap-2 fw-semibold"><span class="icon-pill sand"><i class="bi bi-person-gear"></i></span><span>Editar Usuario</span></div>
             <div class="card-body">
                 <div class="mb-4">
                     <h4 class="fw-bold mb-1">{{ u.username }}</h4>
@@ -28,16 +26,16 @@
                 </div>
                 <form method="POST">
                     
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Correo Electrónico</label>
+                    <div class="form-section section-blue mb-3">
+                        <label class="field-label form-label"><i class="bi bi-envelope"></i> Correo Electrónico</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-envelope"></i></span>
                             <input type="email" name="email" class="form-control" value="{{ u.email }}" required>
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Nueva Contraseña</label>
+                    <div class="form-section section-lavender mb-3">
+                        <label class="field-label form-label"><i class="bi bi-key"></i> Nueva Contraseña</label>
                         <div class="input-group">
                             <span class="input-group-text">
                                 <i class="bi bi-key-fill"></i>
@@ -54,10 +52,8 @@
                         </small>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">
-                            Rol en el Sistema
-                        </label>
+                    <div class="form-section section-sand mb-3">
+                        <label class="field-label form-label"><i class="bi bi-shield-check"></i> Rol en el Sistema</label>
                         <div class="input-group">
                             <span class="input-group-text">
                                 <i class="bi bi-shield-lock"></i>
@@ -83,7 +79,7 @@
                             <i class="bi bi-arrow-left me-1"></i>
                             Cancelar
                         </a>
-                        <button type="submit" class="btn btn-success">
+                        <button type="submit" class="btn btn-accent-teal">
                             <i class="bi bi-check-circle me-1"></i>
                             Guardar Cambios
                         </button>

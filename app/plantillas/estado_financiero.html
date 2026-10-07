@@ -15,6 +15,7 @@
         }
         .encabezado-impresion { display: none; }
     </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mojave-theme.css') }}" />
 </head>
 <body class="bg-light">
     {% include 'includes/navbar.html' %}
@@ -42,12 +43,12 @@
                 <input type="date" name="fecha_fin" class="form-control" value="{{ fecha_fin }}">
             </div>
             <div class="col-md-2 d-flex gap-2 align-items-end">
-                <button type="submit" class="btn w-100 fw-bold text-white shadow-sm" style="background-color: #18392B;">Filtrar</button>
+                <button type="submit" class="btn w-100 fw-bold text-white shadow-sm" style="background-color: #1D1D1F;">Filtrar</button>
             </div>
         </form>
 
         <div class="d-flex justify-content-end mb-3 esconder-impresion">
-            <button onclick="window.print()" class="btn text-white btn-sm fw-bold shadow-sm" style="background-color: #DE3B40;">
+            <button onclick="window.print()" class="btn text-white btn-sm fw-bold shadow-sm" style="background-color: #B86A55;">
                 <i class="bi bi-printer-fill me-1"></i> Imprimir Reporte
             </button>
         </div>
@@ -55,7 +56,7 @@
         <!-- Tarjetas de Resumen Financiero -->
         <div class="row g-4 mb-4">
             <div class="col-md-12">
-                <div class="card shadow-sm border-0 text-center py-4" style="background-color: #18392B; color: white;">
+                <div class="card shadow-sm border-0 text-center py-4" style="background-color: #1D1D1F; color: white;">
                     <h5 class="text-uppercase fw-bold text-white-50">Valor Actual Total del Inventario</h5>
                     <h1 class="display-4 fw-bold m-0">${{ "%.2f"|format(valor_actual) }}</h1>
                 </div>
@@ -93,7 +94,7 @@
         <!-- Desglose por Categoría -->
         <div class="card shadow-sm border-0">
             <div class="card-header bg-white py-3">
-                <h5 class="fw-bold m-0" style="color: #18392B;">Desglose del Capital por Categorías (Actual)</h5>
+                <h5 class="fw-bold m-0" style="color: #1D1D1F;">Desglose del Capital por Categorías (Actual)</h5>
             </div>
             <div class="card-body p-0">
                 <table class="table table-hover align-middle mb-0">
