@@ -46,3 +46,41 @@
 
 .estado-sinstock { background: #fff0ef !important; color: #c83028 !important; }
 .estado-sinstock::before { background: #ff3b30; }
+
+
+/* ========================================================
+   NUEVO: ESTILOS PARA LA CÁPSULA DINÁMICA DEL HEADER 
+======================================================== */
+.capsula-estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 1.2rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  border: 1px solid;
+  transition: all 0.2s ease;
+}
+
+.capsula-saludable {
+  background-color: rgba(95, 143, 136, 0.1);
+  border-color: rgba(95, 143, 136, 0.3) !important;
+  color: #5f8f88;
+  cursor: default;
+}
+
+.capsula-critica {
+  background-color: rgba(196, 119, 93, 0.1);
+  border-color: rgba(196, 119, 93, 0.4) !important;
+  color: #c4775d;
+  cursor: pointer;
+}
+
+.capsula-critica:hover {
+  background-color: rgba(196, 119, 93, 0.18);
+}
+
+.capsula-critica.activa {
+  background-color: rgba(196, 119, 93, 0.25);
+  border-color: rgba(196, 119, 93, 0.6) !important;
+}

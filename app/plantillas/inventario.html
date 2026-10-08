@@ -8,26 +8,54 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/inventario.css') }}" />
-      <link rel="stylesheet" href="{{ url_for('static', filename='css/mojave-theme.css') }}" />
-</head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mojave-theme.css') }}" />
+  </head>
   <body class="bg-light">
     {% include 'includes/navbar.html' %}
     
     <div class="container-fluid px-4 py-3">
       <!-- Cabecera Principal de la pantalla -->
-      <div class="d-flex justify-content-between align-items-center mb-4 bg-white p-3 rounded shadow-sm border">
-        <div class="page-title-row">
+      <div class="d-flex justify-content-between align-items-center mb-4 bg-white p-3 rounded shadow-sm border flex-wrap gap-3 esconder-impresion">
+        
+        <div class="page-title-row mb-0">
           <span class="page-title-icon"><i class="bi bi-box-seam"></i></span>
           <div>
             <h3 class="mb-0 fw-bold">Inventario de Repuestos</h3>
             <small class="text-muted">Consulta existencias, documentos y estado de cada pieza.</small>
           </div>
         </div>
+
+        <!-- CÁPSULA DINÁMICA DE ESTADO -->
+        <div class="mx-auto">
+            {% if stats.criticos == 0 %}
+            <div class="capsula-estado capsula-saludable shadow-sm">
+                <i class="bi bi-check-circle-fill"></i>
+                <span class="fw-semibold">Inventario saludable</span>
+                <span class="opacity-50 mx-1">·</span>
+                <span>{{ stats.total }} productos</span>
+                <span class="opacity-50 mx-1">·</span>
+                <span>0 críticos</span>
+                <span class="opacity-50 mx-1">·</span>
+                <span>{{ stats.reservas }} reservas</span>
+            </div>
+            {% else %}
+            <div id="capsulaCriticos" class="capsula-estado capsula-critica shadow-sm" onclick="toggleFiltroCriticos()">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <span class="fw-bold">Atención requerida</span>
+                <span class="opacity-50 mx-1">·</span>
+                <span>{{ stats.bajo_minimo }} bajo mínimo</span>
+                <span class="opacity-50 mx-1">·</span>
+                <span>{{ stats.agotados }} agotados</span>
+                <span class="opacity-50 mx-1">·</span>
+                <span id="textoAccionCapsula" class="text-decoration-underline fw-semibold">Filtrar tabla</span>
+            </div>
+            {% endif %}
+        </div>
         
         {% if session['rol'] in ['Administrador', 'Bodeguero'] %}
-        <div>
+        <div class="d-flex gap-2">
           <!-- Botón que abre el Modal de Importación CSV -->
-          <button type="button" class="btn btn-secondary me-2 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalImportarCSV">
+          <button type="button" class="btn btn-secondary fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalImportarCSV">
             <i class="bi bi-upload me-1"></i> Importar CSV
           </button>
           <!-- Botón que abre el Modal de Nuevo Producto -->
@@ -56,11 +84,11 @@
           <!-- Filtros -->
           <div class="row mb-3 align-items-center bg-white p-3 rounded shadow-sm mx-0 border filter-panel">
               <div class="col-md-4 mb-2 mb-md-0">
-                  <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-search"></i>Búsqueda (Marca, Nombre, SKU)</label>
+                  <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-search"></i> Búsqueda (Marca, Nombre, SKU)</label>
                   <div class="input-group"><span class="input-group-text"><i class="bi bi-search"></i></span><input type="text" id="filtroBuscar" class="form-control" placeholder="Ej. Toyota, Filtro de aceite..."></div>
               </div>
               <div class="col-md-4 mb-2 mb-md-0">
-                  <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-tags"></i>Filtrar por Categoría</label>
+                  <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-tags"></i> Filtrar por Categoría</label>
                   <select id="filtroCategoria" class="form-select">
                       <option value="">Todas las Categorías</option>
                       {% for c in categorias %}
@@ -226,7 +254,6 @@
     </div>
 
     <!-- Modal Importar CSV -->
-<!-- Modal Importar CSV -->
     <div class="modal fade" id="modalImportarCSV" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog">
         <div class="modal-content border-0">
@@ -243,7 +270,6 @@
               </button>
             </form>
             
-            <!-- NUEVO BOTÓN DE DESCARGA -->
             <hr class="my-3 text-muted">
             <p class="small text-muted mb-2">¿No tienes el formato correcto?</p>
             <a href="{{ url_for('inventario.descargar_plantilla_csv') }}" class="btn btn-outline-secondary w-100 fw-bold shadow-sm">
@@ -258,9 +284,30 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
+      // Variable global para pasar el rol al JS
+      const userRol = "{{ session.get('rol') }}";
+      let filtrandoCriticos = false;
+      
+      // Función que activa/desactiva el filtro visual desde la cápsula
+      window.toggleFiltroCriticos = function() {
+          filtrandoCriticos = !filtrandoCriticos;
+          const capsula = document.getElementById('capsulaCriticos');
+          const texto = document.getElementById('textoAccionCapsula');
+          
+          if (filtrandoCriticos) {
+              capsula.classList.add('activa');
+              texto.textContent = "Ver todos";
+          } else {
+              capsula.classList.remove('activa');
+              texto.textContent = "Filtrar tabla";
+          }
+          // Llamamos a la API para re-renderizar la tabla respetando también el buscador
+          aplicarFiltros(); 
+      };
+
+      let alertas = {{ alertas_stock | tojson | safe }};
+      
       document.addEventListener("DOMContentLoaded", function() {
-        
-        let alertas = {{ alertas_stock | tojson | safe }};
         if (alertas && alertas.length > 0) {
             let mensajeHTML = '<ul style="text-align: left; font-size: 14px;">';
             alertas.forEach(function(item) {
@@ -288,7 +335,7 @@
         const tbodyProductos = document.querySelector('table tbody');
         const spanTotal = document.getElementById('totalProductos');
 
-        function aplicarFiltros() {
+        window.aplicarFiltros = function() {
             const params = new URLSearchParams({
                 q: filtroBuscar.value,
                 categoria_id: filtroCategoria.value
@@ -297,22 +344,29 @@
             fetch(`/api/productos/filtrar?${params.toString()}`)
                 .then(res => res.json())
                 .then(data => {
-                    spanTotal.textContent = data.total;
                     tbodyProductos.innerHTML = ''; 
+                    let conteoFiltrado = 0;
 
                     if (data.total === 0) {
+                        spanTotal.textContent = "0";
                         tbodyProductos.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">No se encontraron productos.</td></tr>`;
                         return;
                     }
 
                     data.productos.forEach(p => {
                         const stock_disponible = p.cantidad - p.stock_reservado;
+                        const min_permitido = p.stock_minimo !== undefined && p.stock_minimo !== null ? p.stock_minimo : 5;
+                        const esCritico = stock_disponible <= min_permitido;
                         
+                        // Si la cápsula de críticos está activa y el producto está sano, lo ocultamos
+                        if (filtrandoCriticos && !esCritico) return;
+
+                        conteoFiltrado++;
+
                         let iconosArchivos = '';
                         if(p.foto) iconosArchivos += '<i class="bi bi-image me-1 text-primary"></i>';
                         if(p.ficha_pdf) iconosArchivos += '<i class="bi bi-file-earmark-pdf-fill text-danger"></i>';
 
-                        const min_permitido = p.stock_minimo !== undefined ? p.stock_minimo : 5;
                         let estadoPill = '';
                         if (stock_disponible <= 0) {
                             estadoPill = '<span class="estado-pill estado-sinstock">Sin stock</span>';
@@ -324,10 +378,14 @@
 
                         let botonesAccion = `<a href="/producto/${p.id}" class="btn btn-primary btn-sm"><i class="bi bi-eye-fill me-1"></i>Ver</a> `;
                         
-                        // Solo mostramos editar/eliminar si el rol lo permite (asumimos que la ruta los protege)
-                        botonesAccion += `
-                            <a href="/editar_producto/${p.id}" class="btn btn-warning btn-sm"><i class="bi bi-pencil-fill me-1"></i>Editar</a>
-                        `;
+                        if (userRol === 'Administrador' || userRol === 'Bodeguero') {
+                            botonesAccion += `
+                                <a href="/editar_producto/${p.id}" class="btn btn-warning btn-sm"><i class="bi bi-pencil-fill me-1"></i>Editar</a>
+                                <form action="/eliminar_producto/${p.id}" method="POST" class="d-inline" onsubmit="return confirm('¿Eliminar producto y su historial?');">
+                                    <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-trash-fill me-1"></i> Eliminar</button>
+                                </form>
+                            `;
+                        }
 
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
@@ -343,6 +401,11 @@
                         `;
                         tbodyProductos.appendChild(tr);
                     });
+                    
+                    if(conteoFiltrado === 0) {
+                        tbodyProductos.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">No se encontraron productos con estos filtros.</td></tr>`;
+                    }
+                    spanTotal.textContent = conteoFiltrado;
                 });
         }
 
@@ -359,33 +422,25 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Buscamos el campo SKU dentro del modal de crear producto
             const skuInput = document.querySelector('input[name="sku"]');
             
             if (skuInput) {
-                // Buscamos el botón de guardar de ese formulario
                 const submitBtn = skuInput.closest('form').querySelector('button[type="submit"]');
-                
-                // Creamos un mensajito rojo que aparecerá debajo del campo
                 const feedback = document.createElement('div');
                 feedback.className = 'invalid-feedback fw-bold';
                 skuInput.parentNode.insertBefore(feedback, skuInput.nextSibling);
 
-                // Escuchamos cada vez que el usuario teclea algo
                 skuInput.addEventListener('input', async function() {
-                    // 1. Forzar mayúsculas automáticamente mientras escribe
                     let valor = this.value.toUpperCase();
                     this.value = valor;
 
-                    // 2. Validar que no tenga espacios
                     if (valor.includes(' ')) {
                         this.classList.add('is-invalid');
                         feedback.innerText = 'El SKU no puede contener espacios.';
-                        submitBtn.disabled = true; // Bloquea el botón de guardar
+                        submitBtn.disabled = true; 
                         return;
                     }
 
-                    // 3. Consultar a la base de datos en tiempo real si el SKU ya existe
                     if (valor.length > 0) {
                         try {
                             const response = await fetch('/api/validar_sku?sku=' + encodeURIComponent(valor));
@@ -395,9 +450,8 @@
                                 this.classList.remove('is-valid');
                                 this.classList.add('is-invalid');
                                 feedback.innerText = 'Este SKU ya está registrado en el sistema.';
-                                submitBtn.disabled = true; // Bloquea el botón
+                                submitBtn.disabled = true; 
                             } else {
-                                // Si está perfecto, lo marcamos en verde y habilitamos el botón
                                 this.classList.remove('is-invalid');
                                 this.classList.add('is-valid');
                                 submitBtn.disabled = false; 
@@ -406,7 +460,6 @@
                             console.error("Error validando SKU:", error);
                         }
                     } else {
-                        // Si el campo está vacío, limpiamos las alertas
                         this.classList.remove('is-invalid', 'is-valid');
                         submitBtn.disabled = false;
                     }

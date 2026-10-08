@@ -93,19 +93,16 @@ def exportar_reporte_csv():
 
     si = io.StringIO()
     cw = csv.writer(si)
-    # Agregamos la columna 'Estado' al CSV
     cw.writerow(['SKU', 'Repuesto', 'Stock Fisico', 'Stock Reservado', 'Stock Real Disponible', 'Stock Minimo', 'Precio', 'Estado'])
     
     for c in criticos:
         stock_real = c['cantidad'] - c['stock_reservado']
-        # Lógica de clasificación para el CSV
         estado = 'Agotado (Crítico)' if stock_real <= 0 else 'Por Agotarse'
         cw.writerow([c['sku'], c['nombre'], c['cantidad'], c['stock_reservado'], stock_real, c['stock_minimo'], c['precio'], estado])
     
     output = si.getvalue()
     return Response(output, mimetype="text/csv", headers={"Content-Disposition": "attachment;filename=Reporte_Critico_EquiParts.csv"})
 
-# --- NUEVO CÓDIGO PARA HU-24: INVENTARIO HISTÓRICO ---
 @reportes_bp.route('/reporte_historico', methods=['GET', 'POST'])
 def reporte_historico():
     if 'user_id' not in session or session.get('rol') != 'Administrador': 
@@ -195,13 +192,11 @@ def exportar_historico_csv():
     output = si.getvalue()
     return Response(output, mimetype="text/csv", headers={"Content-Disposition": f"attachment;filename=Inventario_Historico_{fecha_consulta}.csv"})
 
-# --- NUEVO CÓDIGO PARA HU-25: FLUJO DE ENTRADAS Y SALIDAS ---
 @reportes_bp.route('/flujo_movimientos', methods=['GET'])
 def flujo_movimientos():
     if 'user_id' not in session or session.get('rol') != 'Administrador': 
         return redirect(url_for('inventario.inventario'))
     
-    # Capturamos los filtros de la URL (si existen)
     fecha_inicio = request.args.get('fecha_inicio', '')
     fecha_fin = request.args.get('fecha_fin', '')
     tipo_filtro = request.args.get('tipo_filtro', 'Todos')
@@ -209,7 +204,6 @@ def flujo_movimientos():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # AGREGAMOS m.id A LA CONSULTA PARA PODER ABRIR EL COMPROBANTE
     query = '''SELECT m.id, p.sku, p.nombre, m.tipo, m.fecha, m.cantidad, u.username as responsable
                FROM movimientos m
                LEFT JOIN productos p ON m.producto_id = p.id
@@ -217,7 +211,6 @@ def flujo_movimientos():
                WHERE 1=1'''
     params = []
     
-    # 1. Filtro por rango de fechas
     if fecha_inicio:
         query += ' AND m.fecha >= %s'
         params.append(f"{fecha_inicio} 00:00:00")
@@ -225,7 +218,6 @@ def flujo_movimientos():
         query += ' AND m.fecha <= %s'
         params.append(f"{fecha_fin} 23:59:59")
         
-    # 2. Filtro por tipo de movimiento
     if tipo_filtro == 'Entradas':
         query += " AND (m.tipo = 'Entrada' OR m.tipo LIKE 'Devolución%%' OR m.tipo = 'Creación de Producto')"
     elif tipo_filtro == 'Salidas':
@@ -233,7 +225,6 @@ def flujo_movimientos():
     elif tipo_filtro == 'Ajustes':
         query += " AND m.tipo LIKE 'Ajuste%%'"
         
-    # 3. Orden cronológico descendente (el más reciente primero)
     query += ' ORDER BY m.fecha DESC'
     
     cursor.execute(query, params)
@@ -296,8 +287,6 @@ def exportar_flujo_csv():
     output = si.getvalue()
     return Response(output, mimetype="text/csv", headers={"Content-Disposition": f"attachment;filename=Flujo_Movimientos_{tipo_filtro}.csv"})
 
-####################################
-# --- NUEVO CÓDIGO: FLUJO VALORIZADO (MOVIMIENTOS CON DINERO) ---
 @reportes_bp.route('/flujo_valorizado', methods=['GET'])
 def flujo_valorizado():
     if 'user_id' not in session or session.get('rol') != 'Administrador': 
@@ -310,8 +299,14 @@ def flujo_valorizado():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    query = '''SELECT m.id, p.sku, p.nombre, m.tipo, m.fecha, m.cantidad, p.precio, 
-                      (m.cantidad * p.precio) as total_movimiento, u.username as responsable
+    # IMPORTANTE: Usamos COALESCE para evitar los errores NoneType cuando el producto es NULL
+    query = '''SELECT m.id, 
+                      COALESCE(p.sku, 'N/A') as sku, 
+                      COALESCE(p.nombre, 'Registro Global') as nombre, 
+                      m.tipo, m.fecha, m.cantidad, 
+                      COALESCE(p.precio, 0) as precio, 
+                      COALESCE(m.cantidad * p.precio, 0) as total_movimiento, 
+                      u.username as responsable
                FROM movimientos m
                LEFT JOIN productos p ON m.producto_id = p.id
                LEFT JOIN usuarios u ON m.usuario_id = u.id
@@ -349,15 +344,20 @@ def exportar_flujo_valorizado_csv():
     if 'user_id' not in session or session.get('rol') != 'Administrador': 
         return redirect(url_for('inventario.inventario'))
         
-    # Misma lógica de extracción, pero directo a CSV
     fecha_inicio = request.args.get('fecha_inicio', '')
     fecha_fin = request.args.get('fecha_fin', '')
     tipo_filtro = request.args.get('tipo_filtro', 'Todos')
     
     conn = get_db_connection()
     cursor = conn.cursor()
-    query = '''SELECT p.sku, p.nombre, m.tipo, m.fecha, m.cantidad, p.precio, 
-                      (m.cantidad * p.precio) as total_movimiento, u.username as responsable
+    
+    # Misma corrección de COALESCE para evitar caídas en el CSV
+    query = '''SELECT COALESCE(p.sku, 'N/A') as sku, 
+                      COALESCE(p.nombre, 'Registro Global') as nombre, 
+                      m.tipo, m.fecha, m.cantidad, 
+                      COALESCE(p.precio, 0) as precio, 
+                      COALESCE(m.cantidad * p.precio, 0) as total_movimiento, 
+                      u.username as responsable
                FROM movimientos m
                LEFT JOIN productos p ON m.producto_id = p.id
                LEFT JOIN usuarios u ON m.usuario_id = u.id
@@ -385,7 +385,6 @@ def exportar_flujo_valorizado_csv():
     output = si.getvalue()
     return Response(output, mimetype="text/csv", headers={"Content-Disposition": "attachment;filename=Flujo_Valorizado.csv"})
 
-# --- NUEVO CÓDIGO: ESTADO FINANCIERO GENERAL ---
 @reportes_bp.route('/estado_financiero', methods=['GET'])
 def estado_financiero():
     if 'user_id' not in session or session.get('rol') != 'Administrador': 
@@ -424,7 +423,6 @@ def estado_financiero():
     
     for r in res_movs:
         tipo = r['tipo']
-        # Convertimos explícitamente a float para evitar el choque con Decimal
         val = float(r['total_valor']) if r['total_valor'] else 0.0
         
         if 'Entrada' in tipo or 'Devolución' in tipo or 'Creación' in tipo:
@@ -456,15 +454,11 @@ def estado_financiero():
                            fecha_fin=fecha_fin,
                            username=session.get('username'))
 
-##################################################################
-
-# --- NUEVO CÓDIGO: GENERADOR DE REPORTES DINÁMICO ---
 @reportes_bp.route('/personalizado', methods=['GET', 'POST'])
 def reporte_personalizado():
     if 'user_id' not in session or session.get('rol') != 'Administrador': 
         return redirect(url_for('inventario.inventario'))
     
-    # Diccionario con todas las columnas que el usuario puede elegir
     columnas_disponibles = {
         'sku': 'Código (SKU)',
         'nombre': 'Nombre del Repuesto',
@@ -482,7 +476,7 @@ def reporte_personalizado():
 
     if request.method == 'POST':
         columnas_seleccionadas = request.form.getlist('columnas')
-        accion = request.form.get('accion') # Puede ser 'ver' o 'csv'
+        accion = request.form.get('accion') 
         
         if not columnas_seleccionadas:
             flash('Debe seleccionar al menos una columna para generar el reporte.', 'warning')
@@ -498,9 +492,7 @@ def reporte_personalizado():
         
         for p in productos:
             p_dict = dict(p)
-            # Calculamos el valor total al vuelo por si seleccionaron esa columna
             p_dict['valor_total'] = float(p['cantidad'] * p['precio'])
-            # Asegurarnos de que las categorías vacías no den error
             if not p_dict['categoria_nombre']:
                 p_dict['categoria_nombre'] = 'Sin Categoría'
             productos_data.append(p_dict)
@@ -508,16 +500,13 @@ def reporte_personalizado():
         cursor.close()
         conn.close()
 
-        # Si el usuario presionó el botón de "Descargar CSV"
         if accion == 'csv':
             si = io.StringIO()
             cw = csv.writer(si)
             
-            # Escribir cabeceras dinámicas
             headers = [columnas_disponibles[col] for col in columnas_seleccionadas]
             cw.writerow(headers)
             
-            # Escribir filas dinámicas
             for p in productos_data:
                 row = []
                 for col in columnas_seleccionadas:
@@ -536,11 +525,6 @@ def reporte_personalizado():
                            productos=productos_data,
                            username=session.get('username'))
 
-import csv
-import io
-from datetime import datetime
-from flask import request, session, Response
-
 @reportes_bp.route('/auditoria/purgar_global', methods=['POST'])
 def purgar_auditoria_global():
     if 'user_id' not in session or session.get('rol') != 'Administrador':
@@ -551,7 +535,6 @@ def purgar_auditoria_global():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # 1. Verificar la contraseña del administrador
     cursor.execute('SELECT password FROM usuarios WHERE id = %s', (session['user_id'],))
     user = cursor.fetchone()
     
@@ -567,7 +550,6 @@ def purgar_auditoria_global():
         conn.close()
         return "<script>alert('Error: Contraseña de administrador incorrecta.'); window.close();</script>"
         
-    # 2. Extraer TODOS los movimientos del sistema
     cursor.execute('''SELECT m.id, m.fecha, u.username, m.tipo, p.sku, p.nombre, m.cantidad 
                       FROM movimientos m 
                       LEFT JOIN usuarios u ON m.usuario_id = u.id 
@@ -575,7 +557,6 @@ def purgar_auditoria_global():
                       ORDER BY m.fecha DESC''')
     historial = cursor.fetchall()
     
-    # 3. Generar el CSV Maestro
     si = io.StringIO()
     cw = csv.writer(si)
     cw.writerow(['EQUIPARTS S&S - RESPALDO MAESTRO DE AUDITORIA (PURGA GLOBAL)'])
@@ -588,17 +569,13 @@ def purgar_auditoria_global():
         
     output = si.getvalue()
     
-    # 4. Vaciar la tabla y registrar la acción
     cursor.execute('DELETE FROM movimientos')
     
-    # Nota: Si tu base de datos exige obligatoriamente un "producto_id" y no acepta NULL,
-    # envíame un mensaje y ajustaremos esto para usar un producto genérico o temporal.
     try:
         cursor.execute('''INSERT INTO movimientos (producto_id, usuario_id, tipo, cantidad) 
                           VALUES (NULL, %s, 'Purga Global de Sistema (CSV Respaldo Descargado)', 0)''', 
                        (session['user_id'],))
     except Exception as e:
-        # Fallback de seguridad si la DB bloquea valores NULL en producto_id
         pass
 
     conn.commit()

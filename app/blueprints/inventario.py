@@ -76,20 +76,36 @@ def inventario():
     cursor.execute('SELECT * FROM categorias')
     categorias = cursor.fetchall()
     
-    # Evaluar alertas de stock crítico para los popups
+    # --- CÁLCULO DE ESTADÍSTICAS PARA LA CÁPSULA DINÁMICA ---
     alertas_stock = []
+    stats = {
+        'total': len(productos),
+        'agotados': 0,
+        'bajo_minimo': 0,
+        'reservas': 0
+    }
+    
     for p in productos:
         stock_real = p['cantidad'] - p['stock_reservado']
-        if stock_real <= p['stock_minimo']:
+        stats['reservas'] += p['stock_reservado']
+        
+        if stock_real <= 0:
+            stats['agotados'] += 1
             alertas_stock.append({'nombre': p['nombre'], 'stock': stock_real, 'minimo': p['stock_minimo']})
+        elif stock_real <= p['stock_minimo']:
+            stats['bajo_minimo'] += 1
+            alertas_stock.append({'nombre': p['nombre'], 'stock': stock_real, 'minimo': p['stock_minimo']})
+            
+    stats['criticos'] = stats['agotados'] + stats['bajo_minimo']
             
     cursor.close()
     conn.close()
     
-    # Renderizamos sin el código de la gráfica, que estaba causando error aquí
+    # Renderizamos pasando el nuevo diccionario stats
     return render_template('inventario.html', productos=productos, categorias=categorias, 
                            username=session.get('username'), rol=session.get('rol'), 
-                           busqueda=busqueda, alertas_stock=alertas_stock)
+                           busqueda=busqueda, alertas_stock=alertas_stock, stats=stats)
+
 
 @inventario_bp.route('/editar_producto/<int:id>', methods=['GET', 'POST'])
 def editar_producto(id):
@@ -304,7 +320,6 @@ def detalle_producto(id):
                     tipo = f"Ajuste manual: {justificacion}"
                     cantidad_mov = diferencia
 
-        # --- NUEVA LÓGICA: TRASLADO A MERMAS ---
         elif tipo == 'Mermar':
             if session.get('rol') != 'Administrador':
                 flash('Acceso denegado.', 'danger')
@@ -318,21 +333,17 @@ def detalle_producto(id):
                     flash('Error: No hay suficiente stock disponible para mermar.', 'danger')
                     error = True
                 else:
-                    # Restamos del físico porque ya no se puede vender
                     nueva_cantidad = stock_fisico - cantidad_mov
                     cursor.execute('UPDATE productos SET cantidad = %s WHERE id = %s', (nueva_cantidad, id))
                     flash('Repuesto trasladado a Mermas correctamente.', 'success')
                     tipo = f"Traslado a Mermas: {justificacion}"
 
-        # --- NUEVA LÓGICA: DESTRUCCIÓN DESDE MERMAS ---
         elif tipo == 'Baja':
             if session.get('rol') != 'Administrador':
                 flash('Acceso denegado.', 'danger')
                 error = True
             else:
                 justificacion = request.form.get('justificacion', '').strip()
-                
-                # Averiguamos cuántas piezas tenemos en Mermas para no destruir de más
                 cursor.execute('''
                     SELECT 
                         SUM(CASE WHEN tipo LIKE 'Traslado a Mermas%%' OR tipo LIKE 'Devolución (Dañado%%' THEN cantidad ELSE 0 END) - 
@@ -350,8 +361,6 @@ def detalle_producto(id):
                     flash(f'Error: Solo tienes {int(mermas_disponibles)} piezas en Mermas. No puedes destruir {cantidad_mov}.', 'danger')
                     error = True
                 else:
-                    # El stock físico NO cambia porque la pieza ya se había restado al enviarla a Mermas.
-                    # Solo registramos el movimiento para que baje el contador virtual de Mermas.
                     flash('Repuesto destruido definitivamente.', 'success')
                     tipo = f"Destrucción de Merma: {justificacion}"
 
@@ -414,9 +423,6 @@ def detalle_producto(id):
                                 WHERE m.producto_id = %s ORDER BY m.fecha DESC''', (id,))
     historial = cursor.fetchall()
     
-    # --- CÁLCULO DE LA BODEGA VIRTUAL DE MERMAS ---
-    # Sumamos lo que entró a mermas (Traslados y Devoluciones Dañadas) 
-    # y le restamos lo que ya se destruyó/desechó.
     cursor.execute('''
         SELECT 
             SUM(CASE WHEN tipo LIKE 'Traslado a Mermas%%' OR tipo LIKE 'Devolución (Dañado%%' THEN cantidad ELSE 0 END) - 
@@ -427,7 +433,6 @@ def detalle_producto(id):
     mermas_ui = cursor.fetchone()
     total_dañados = mermas_ui['mermas_actuales'] if mermas_ui['mermas_actuales'] else 0
 
-    # --- GRÁFICA: VENTAS VS DAÑOS ---
     cursor.execute('''
         SELECT DATE(fecha) as dia, 
                SUM(CASE WHEN tipo IN ('Salida', 'Venta_Cotizacion') THEN cantidad ELSE 0 END) as total_ventas,
@@ -502,7 +507,7 @@ def importar_csv():
         try:
             stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
             csv_input = csv.reader(stream)
-            next(csv_input, None) # Saltar encabezados
+            next(csv_input, None)
 
             conn = get_db_connection()
             cursor = conn.cursor()
@@ -531,7 +536,7 @@ def importar_csv():
                                        (nuevo_id, session['user_id'], cantidad))
                         productos_importados += 1
                     except Exception:
-                        pass # Ignorar filas defectuosas o con SKU duplicado
+                        pass
 
             conn.commit()
             cursor.close()
@@ -596,7 +601,8 @@ def api_filtrar_productos():
             'precio': p['precio'],
             'foto': p['foto'],
             'ficha_pdf': p['ficha_pdf'],
-            'categoria_nombre': p['categoria_nombre']
+            'categoria_nombre': p['categoria_nombre'],
+            'stock_minimo': p['stock_minimo']
         })
     
     cursor.close()
@@ -682,11 +688,9 @@ def purgar_historial(id):
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # 1. Verificar contraseña del administrador en curso
     cursor.execute('SELECT password FROM usuarios WHERE id = %s', (session['user_id'],))
     user = cursor.fetchone()
     
-    # Soporte por si guardas contraseñas encriptadas o en texto plano
     from werkzeug.security import check_password_hash
     es_valida = False
     try:
@@ -699,7 +703,6 @@ def purgar_historial(id):
         conn.close()
         return "<script>alert('Error: Contraseña de administrador incorrecta.'); window.close();</script>"
         
-    # 2. Generar el CSV con todo lo existente antes de borrar
     cursor.execute('SELECT sku, nombre FROM productos WHERE id = %s', (id,))
     producto = cursor.fetchone()
     
@@ -722,7 +725,6 @@ def purgar_historial(id):
         
     output = si.getvalue()
     
-    # 3. Borrar historial e insertar registro de auditoría
     cursor.execute('DELETE FROM movimientos WHERE producto_id = %s', (id,))
     cursor.execute('''INSERT INTO movimientos (producto_id, usuario_id, tipo, cantidad) 
                       VALUES (%s, %s, 'Purga de Historial (Respaldo CSV Descargado)', 0)''', 
@@ -732,7 +734,6 @@ def purgar_historial(id):
     cursor.close()
     conn.close()
     
-    # 4. Enviar el archivo CSV para descarga
     return Response(
         output, 
         mimetype="text/csv", 
