@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
     <meta charset="UTF-8">
     <title>Log de Auditoría - Equi-Parts S&S</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}" />
-<link rel="stylesheet" href="{{ url_for('static', filename='css/inventario.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/inventario.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mojave-theme.css') }}" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="bg-light">
     {% include 'includes/navbar.html' %}
@@ -19,9 +21,20 @@
                     <h4 class="mb-1"><i class="bi bi-clock-history me-2 text-primary"></i>Registro Global de Movimientos</h4>
                     <small class="text-muted">Auditoría y trazabilidad del inventario</small>
                 </div>
-                <a href="{{ url_for('reportes.exportar_auditoria') }}" class="btn btn-primary btn-sm">
-                    <i class="bi bi-download me-1"></i> Exportar CSV
-                </a>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('reportes.exportar_auditoria') }}" class="btn btn-primary btn-sm fw-bold">
+                        <i class="bi bi-download me-1"></i> Exportar CSV
+                    </a>
+                    
+                    {% if session['rol'] == 'Administrador' %}
+                    <form id="formPurgarGlobal" action="{{ url_for('reportes.purgar_auditoria_global') }}" method="POST" target="_blank" style="display: none;">
+                        <input type="password" name="password_admin" id="inputPasswordAdminGlobal">
+                    </form>
+                    <button type="button" onclick="confirmarPurgaGlobal()" class="btn btn-sm fw-bold shadow-sm text-white" style="background-color: #c4775d; border-color: #c4775d;">
+                        <i class="bi bi-trash3-fill me-1"></i> Purgar Todo
+                    </button>
+                    {% endif %}
+                </div>
             </div>
             <div class="card-body p-0">
                 <table class="table table-striped table-hover align-middle mb-0" style="font-size: 0.9em;">
@@ -32,7 +45,7 @@
                             <th>Operario</th>
                             <th>Tipo de Operación</th>
                             <th>Repuesto afectado</th>
-                            <th class="fw-bold">Cantidad</th>
+                            <th class="fw-bold text-center">Cantidad</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -41,10 +54,12 @@
                             <td>#{{ log.transaccion_id }}</td>
                             <td>{{ log.fecha }}</td>
                             <td><span class="badge bg-secondary">{{ log.username }}</span></td>
-                            <td class="text-center">
-                                {% if log.tipo == 'Entrada' %}
+                            <td class="text-start">
+                                {% if 'Purga Global' in log.tipo %}
+                                    <span class="text-danger fw-bold"><i class="bi bi-shield-lock-fill"></i> Eliminación de Movimientos (Purga Global)</span>
+                                {% elif log.tipo == 'Entrada' %}
                                     <span class="text-primary fw-bold">📥 Ingreso Bodega</span>
-                                {% elif log.tipo == 'Masivo' or 'CSV' in log.tipo %}
+                                {% elif 'Importación' in log.tipo or 'Masivo' in log.tipo %}
                                     <span class="text-info fw-bold">📑 Importación Masiva</span>
                                 {% elif log.tipo == 'Cotizacion' %}
                                     <span class="text-warning fw-bold text-dark">📋 Reserva (Cotización)</span>
@@ -58,12 +73,12 @@
                                     {{ log.tipo }}
                                 {% endif %}
                             </td>
-                            <td>{{ log.sku }} - {{ log.nombre }}</td>
-                            <td class="fw-bold">{{ log.cantidad }}</td>
+                            <td>{{ log.sku or 'N/A' }} - {{ log.nombre or 'Registro Global' }}</td>
+                            <td class="fw-bold text-center">{{ log.cantidad }}</td>
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="6" class="text-center py-4">No hay movimientos registrados en el sistema aún.</td>
+                            <td colspan="6" class="text-center py-4 text-muted">No hay movimientos registrados en el sistema aún.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -71,7 +86,39 @@
             </div>
         </div>
     </div>
-    <!-- Script necesario para que funcione el menú en móviles -->
+    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        function confirmarPurgaGlobal() {
+            Swal.fire({
+                title: '¡PELIGRO! ¿Purgar Sistema?',
+                html: '<span class="text-danger fw-bold">Se eliminarán TODOS los movimientos de TODOS los productos.</span><br><br>Esta acción reinicia el historial. Se descargará un CSV maestro como respaldo.<br><br>Ingresa tu contraseña para autorizar:',
+                icon: 'warning',
+                input: 'password',
+                inputAttributes: { autocapitalize: 'off', placeholder: 'Tu contraseña de administrador' },
+                showCancelButton: true,
+                confirmButtonColor: '#c4775d',
+                cancelButtonColor: '#6B7280',
+                confirmButtonText: '<i class="bi bi-exclamation-triangle-fill"></i> Sí, Purgar',
+                cancelButtonText: 'Cancelar',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const pwd = result.value;
+                    if (!pwd) {
+                        Swal.fire('Error', 'Debes ingresar tu contraseña.', 'error');
+                        return;
+                    }
+                    
+                    document.getElementById('inputPasswordAdminGlobal').value = pwd;
+                    document.getElementById('formPurgarGlobal').submit();
+                    
+                    Swal.fire('Procesando...', 'El archivo CSV maestro se está descargando y la base de datos se ha limpiado.', 'success');
+                    setTimeout(() => { window.location.reload(); }, 2000);
+                }
+            });
+        }
+    </script>
 </body>
 </html>

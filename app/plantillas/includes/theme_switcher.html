@@ -1,0 +1,40 @@
+<div class="theme-picker" data-theme-switcher>
+  <button
+    type="button"
+    class="theme-picker-trigger"
+    data-theme-trigger
+    aria-haspopup="true"
+    aria-expanded="false"
+    aria-label="Cambiar tema de la aplicación"
+    title="Cambiar tema"
+  >
+    <i class="bi bi-sun-fill" data-theme-trigger-icon></i>
+    <span data-theme-trigger-label>Claro</span>
+    <i class="bi bi-chevron-down theme-picker-chevron"></i>
+  </button>
+
+  <div class="theme-picker-menu" role="menu" aria-label="Seleccionar apariencia">
+    <div class="theme-picker-heading">
+      <span>Apariencia</span>
+      <small>Elige cómo quieres ver Equi-Parts</small>
+    </div>
+
+    <button type="button" class="theme-option" data-set-theme="light" role="menuitemradio" aria-pressed="true">
+      <span class="theme-option-icon theme-option-light"><i class="bi bi-sun-fill"></i></span>
+      <span class="theme-option-copy">
+        <strong>Claro</strong>
+        <small>Limpio y luminoso</small>
+      </span>
+      <i class="bi bi-check2 theme-option-check"></i>
+    </button>
+
+    <button type="button" class="theme-option" data-set-theme="dark" role="menuitemradio" aria-pressed="false">
+      <span class="theme-option-icon theme-option-dark"><i class="bi bi-moon-stars-fill"></i></span>
+      <span class="theme-option-copy">
+        <strong>Oscuro</strong>
+        <small>Cómodo en poca luz</small>
+      </span>
+      <i class="bi bi-check2 theme-option-check"></i>
+    </button>
+  </div>
+</div>

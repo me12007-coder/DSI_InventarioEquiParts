@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="es">
   <head>
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
     <meta charset="UTF-8" />
     <title>Ficha Técnica</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
@@ -179,9 +180,10 @@
         </div>
       </div>
 
-      <div class="row">
+      <!-- SEGUNDA FILA: IMPORTANTE align-items-start evita que el gráfico se estire -->
+      <div class="row align-items-start">
         <div class="col-md-7">
-          <div class="card shadow-sm border-0 rounded-3 h-100">
+          <div class="card shadow-sm border-0 rounded-3 mb-4">
             <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
               <div class="fw-semibold" style="color: #1D1D1F;"><i class="bi bi-clock-history me-2" style="color: #7B8088;"></i> Trazabilidad de Operaciones</div>
               <div class="d-flex gap-2">
@@ -191,8 +193,37 @@
                 <button onclick="window.print()" class="btn btn-document btn-sm fw-bold esconder-impresion">
                   <i class="bi bi-printer-fill"></i> PDF
                 </button>
+                
+                <!-- BOTÓN Y FORM DE PURGA (SOLO ADMIN) -->
+                {% if session['rol'] == 'Administrador' %}
+                <form id="formPurgar" action="{{ url_for('inventario.purgar_historial', id=p.id) }}" method="POST" target="_blank" style="display: none;">
+                    <input type="password" name="password_admin" id="inputPasswordAdmin">
+                </form>
+                <button type="button" onclick="confirmarPurga()" class="btn btn-sm btn-outline-danger fw-bold shadow-sm esconder-impresion ms-2" title="Purgar Historial">
+                  <i class="bi bi-trash3-fill"></i>
+                </button>
+                {% endif %}
               </div>
             </div>
+
+            <!-- PESTAÑAS DE FILTRADO -->
+            <div class="card-header bg-white border-bottom p-0 esconder-impresion">
+              <ul class="nav nav-tabs border-bottom-0 pt-2 px-3" id="tabsTrazabilidad">
+                <li class="nav-item">
+                  <a class="nav-link active px-3 py-2 fw-bold" style="cursor:pointer; background: transparent; border: none; border-bottom: 2px solid #5f8f88; color: #5f8f88;" onclick="filtrarTrazabilidad(event, 'todos')">Todos (15)</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link px-3 py-2 fw-bold" style="cursor:pointer; background: transparent; border: none; border-bottom: 2px solid transparent; color: #7B8088;" onclick="filtrarTrazabilidad(event, 'entradas')">Entradas</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link px-3 py-2 fw-bold" style="cursor:pointer; background: transparent; border: none; border-bottom: 2px solid transparent; color: #7B8088;" onclick="filtrarTrazabilidad(event, 'salidas')">Salidas</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link px-3 py-2 fw-bold" style="cursor:pointer; background: transparent; border: none; border-bottom: 2px solid transparent; color: #7B8088;" onclick="filtrarTrazabilidad(event, 'mermas')">Mermas</a>
+                </li>
+              </ul>
+            </div>
+
             <div class="card-body p-0 table-responsive">
               <table class="table table-hover align-middle mb-0" style="font-size: 0.9em;">
                 <thead style="background-color: #f8f9fa;">
@@ -206,7 +237,8 @@
                 </thead>
                 <tbody>
                   {% for m in movimientos %}
-                  <tr>
+                  <!-- Fila etiquetada para el filtro dinámico -->
+                  <tr class="fila-movimiento" data-tipo="{{ m.tipo }}">
                     <td class="ps-3 text-muted">{{ m.fecha.strftime('%Y-%m-%d %H:%M') if m.fecha else m.fecha }}</td>
                     <td class="text-muted"><i class="bi bi-person-fill"></i> {{ m.username }}</td>
                     <td>
@@ -224,6 +256,8 @@
                       <span class="badge bg-warning bg-opacity-10 text-dark border border-warning px-2 py-1"><i class="bi bi-bookmark me-1"></i>Reserva</span>
                       {% elif 'Ajuste' in m.tipo %}
                       <span class="badge bg-warning bg-opacity-10 text-warning border border-warning px-2 py-1"><i class="bi bi-calculator me-1"></i>{{ m.tipo }}</span>
+                      {% elif 'Purga' in m.tipo %}
+                      <span class="badge bg-info bg-opacity-10 text-info border border-info px-2 py-1"><i class="bi bi-shield-lock-fill me-1"></i>{{ m.tipo }}</span>
                       {% else %}
                       <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary px-2 py-1">{{ m.tipo }}</span>
                       {% endif %}
@@ -246,8 +280,9 @@
           </div>
         </div>
 
+        <!-- GRÁFICO (Sin h-100, con position: sticky) -->
         <div class="col-md-5 mt-4 mt-md-0">
-          <div class="card shadow-sm border-0 rounded-3 h-100 esconder-impresion">
+          <div class="card shadow-sm border-0 rounded-3 esconder-impresion" style="position: sticky; top: 20px;">
             <div class="card-header bg-white border-bottom py-3 fw-semibold" style="color: #1D1D1F;">
               <i class="bi bi-graph-up me-2" style="color: #7B8088;"></i> Ventas vs Daños (30 días)
             </div>
@@ -414,6 +449,78 @@
                 }
             });
         });
+
+        // --- FILTRADO POR PESTAÑAS Y LÍMITE DE 15 ---
+        window.filtrarTrazabilidad = function(e, categoria) {
+            const links = document.querySelectorAll('#tabsTrazabilidad .nav-link');
+            links.forEach(link => {
+                link.classList.remove('active');
+                link.style.color = '#7B8088';
+                link.style.borderColor = 'transparent';
+            });
+            if(e) {
+                e.target.classList.add('active');
+                e.target.style.color = '#5f8f88'; // Color Mojave para el tab activo
+                e.target.style.borderBottomColor = '#5f8f88';
+            }
+
+            const filas = document.querySelectorAll('.fila-movimiento');
+            let count = 0;
+            filas.forEach(fila => {
+                const tipo = fila.getAttribute('data-tipo').toLowerCase();
+                let mostrar = false;
+                
+                if (categoria === 'todos') {
+                    mostrar = count < 15; // Límite de 15
+                } else if (categoria === 'entradas') {
+                    mostrar = tipo.includes('entrada') || tipo.includes('reingreso');
+                } else if (categoria === 'salidas') {
+                    mostrar = tipo.includes('salida') || tipo.includes('venta') || tipo.includes('cotizacion');
+                } else if (categoria === 'mermas') {
+                    mostrar = tipo.includes('merma') || tipo.includes('baja') || tipo.includes('dañado') || tipo.includes('ajuste') || tipo.includes('destrucción');
+                }
+
+                if (mostrar) {
+                    fila.style.display = '';
+                    if (categoria === 'todos') count++;
+                } else {
+                    fila.style.display = 'none';
+                }
+            });
+        };
+        // Inicializar filtro al cargar la página
+        filtrarTrazabilidad(null, 'todos');
+
+
+        // --- LÓGICA DE PURGA ---
+        window.confirmarPurga = function() {
+            Swal.fire({
+                title: '¿Purgar Historial?',
+                html: '<span class="text-danger">Se eliminarán todos los movimientos hasta la fecha.</span><br><br>Se descargará un respaldo CSV automáticamente. Ingresa tu contraseña de administrador para continuar:',
+                icon: 'warning',
+                input: 'password',
+                inputAttributes: { autocapitalize: 'off', placeholder: 'Tu Contraseña' },
+                showCancelButton: true,
+                confirmButtonColor: '#c4775d', // Rojo Mojave
+                cancelButtonColor: '#6B7280',
+                confirmButtonText: '<i class="bi bi-trash-fill"></i> Purgar y Descargar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const pwd = result.value;
+                    if (!pwd) {
+                        Swal.fire('Error', 'Debes ingresar tu contraseña.', 'error');
+                        return;
+                    }
+                    
+                    document.getElementById('inputPasswordAdmin').value = pwd;
+                    document.getElementById('formPurgar').submit();
+                    
+                    Swal.fire('Procesando...', 'El archivo CSV se está descargando y el historial ha sido limpiado.', 'success');
+                    setTimeout(() => { window.location.reload(); }, 1500);
+                }
+            });
+        };
 
         const canvas = document.getElementById('graficoTendencia');
         const fechas = {{ fechas_chart | default('[]') | tojson | safe }};

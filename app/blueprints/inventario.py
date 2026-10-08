@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, current_app, jsonify, Response
 from werkzeug.utils import secure_filename
 from threading import Thread
+from datetime import datetime
 import os
 import csv
 import io
@@ -669,3 +670,71 @@ def validar_sku():
     conn.close()
     
     return jsonify({'existe': resultado['total'] > 0})
+
+
+@inventario_bp.route('/producto/<int:id>/purgar', methods=['POST'])
+def purgar_historial(id):
+    if 'user_id' not in session or session.get('rol') != 'Administrador':
+        return "<script>alert('Acceso denegado'); window.close();</script>"
+    
+    pwd = request.form.get('password_admin', '')
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 1. Verificar contraseña del administrador en curso
+    cursor.execute('SELECT password FROM usuarios WHERE id = %s', (session['user_id'],))
+    user = cursor.fetchone()
+    
+    # Soporte por si guardas contraseñas encriptadas o en texto plano
+    from werkzeug.security import check_password_hash
+    es_valida = False
+    try:
+        es_valida = check_password_hash(user['password'], pwd)
+    except:
+        es_valida = (user['password'] == pwd)
+        
+    if not es_valida:
+        cursor.close()
+        conn.close()
+        return "<script>alert('Error: Contraseña de administrador incorrecta.'); window.close();</script>"
+        
+    # 2. Generar el CSV con todo lo existente antes de borrar
+    cursor.execute('SELECT sku, nombre FROM productos WHERE id = %s', (id,))
+    producto = cursor.fetchone()
+    
+    cursor.execute('''SELECT m.fecha, u.username, m.tipo, m.cantidad 
+                      FROM movimientos m 
+                      JOIN usuarios u ON m.usuario_id = u.id 
+                      WHERE m.producto_id = %s ORDER BY m.fecha DESC''', (id,))
+    historial = cursor.fetchall()
+    
+    si = io.StringIO()
+    cw = csv.writer(si)
+    cw.writerow(['Respaldo Oficial - Purga de Historial de Trazabilidad'])
+    cw.writerow(['Repuesto:', producto['nombre'], 'SKU:', producto['sku']])
+    cw.writerow(['Ejecutado por:', session.get('username'), 'Fecha de Purga:', datetime.now().strftime('%Y-%m-%d %H:%M')])
+    cw.writerow([])
+    cw.writerow(['Fecha', 'Operario', 'Movimiento', 'Cantidad'])
+    
+    for h in historial:
+        cw.writerow([h['fecha'], h['username'], h['tipo'], h['cantidad']])
+        
+    output = si.getvalue()
+    
+    # 3. Borrar historial e insertar registro de auditoría
+    cursor.execute('DELETE FROM movimientos WHERE producto_id = %s', (id,))
+    cursor.execute('''INSERT INTO movimientos (producto_id, usuario_id, tipo, cantidad) 
+                      VALUES (%s, %s, 'Purga de Historial (Respaldo CSV Descargado)', 0)''', 
+                   (id, session['user_id']))
+    
+    conn.commit()
+    cursor.close()
+    conn.close()
+    
+    # 4. Enviar el archivo CSV para descarga
+    return Response(
+        output, 
+        mimetype="text/csv", 
+        headers={"Content-Disposition": f"attachment;filename=Respaldo_Purga_{producto['sku']}.csv"}
+    )

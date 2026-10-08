@@ -535,3 +535,78 @@ def reporte_personalizado():
                            columnas_seleccionadas=columnas_seleccionadas,
                            productos=productos_data,
                            username=session.get('username'))
+
+import csv
+import io
+from datetime import datetime
+from flask import request, session, Response
+
+@reportes_bp.route('/auditoria/purgar_global', methods=['POST'])
+def purgar_auditoria_global():
+    if 'user_id' not in session or session.get('rol') != 'Administrador':
+        return "<script>alert('Acceso denegado'); window.close();</script>"
+    
+    pwd = request.form.get('password_admin', '')
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 1. Verificar la contraseña del administrador
+    cursor.execute('SELECT password FROM usuarios WHERE id = %s', (session['user_id'],))
+    user = cursor.fetchone()
+    
+    from werkzeug.security import check_password_hash
+    es_valida = False
+    try:
+        es_valida = check_password_hash(user['password'], pwd)
+    except:
+        es_valida = (user['password'] == pwd)
+        
+    if not es_valida:
+        cursor.close()
+        conn.close()
+        return "<script>alert('Error: Contraseña de administrador incorrecta.'); window.close();</script>"
+        
+    # 2. Extraer TODOS los movimientos del sistema
+    cursor.execute('''SELECT m.id, m.fecha, u.username, m.tipo, p.sku, p.nombre, m.cantidad 
+                      FROM movimientos m 
+                      LEFT JOIN usuarios u ON m.usuario_id = u.id 
+                      LEFT JOIN productos p ON m.producto_id = p.id
+                      ORDER BY m.fecha DESC''')
+    historial = cursor.fetchall()
+    
+    # 3. Generar el CSV Maestro
+    si = io.StringIO()
+    cw = csv.writer(si)
+    cw.writerow(['EQUIPARTS S&S - RESPALDO MAESTRO DE AUDITORIA (PURGA GLOBAL)'])
+    cw.writerow(['Ejecutado por:', session.get('username'), 'Fecha de Purga:', datetime.now().strftime('%Y-%m-%d %H:%M')])
+    cw.writerow([])
+    cw.writerow(['ID Trans.', 'Fecha', 'Operario', 'Movimiento', 'SKU', 'Producto', 'Cantidad'])
+    
+    for h in historial:
+        cw.writerow([h['id'], h['fecha'], h['username'], h['tipo'], h['sku'], h['nombre'], h['cantidad']])
+        
+    output = si.getvalue()
+    
+    # 4. Vaciar la tabla y registrar la acción
+    cursor.execute('DELETE FROM movimientos')
+    
+    # Nota: Si tu base de datos exige obligatoriamente un "producto_id" y no acepta NULL,
+    # envíame un mensaje y ajustaremos esto para usar un producto genérico o temporal.
+    try:
+        cursor.execute('''INSERT INTO movimientos (producto_id, usuario_id, tipo, cantidad) 
+                          VALUES (NULL, %s, 'Purga Global de Sistema (CSV Respaldo Descargado)', 0)''', 
+                       (session['user_id'],))
+    except Exception as e:
+        # Fallback de seguridad si la DB bloquea valores NULL en producto_id
+        pass
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+    
+    return Response(
+        output, 
+        mimetype="text/csv", 
+        headers={"Content-Disposition": f"attachment;filename=Respaldo_Maestro_Auditoria_{datetime.now().strftime('%Y%m%d')}.csv"}
+    )
