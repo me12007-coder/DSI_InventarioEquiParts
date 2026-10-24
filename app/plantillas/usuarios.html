@@ -137,6 +137,7 @@
                       <th>Usuario</th>
                       <th>Correo</th>
                       <th class="text-center">Rol</th>
+                      <th class="text-center">Estado</th>
                       <th class="text-center">Acciones</th>
                     </tr>
                   </thead>
@@ -167,13 +168,31 @@
                       {% endif %}
                       </td>
                       <td class="text-center">
+                          {% if u.activo %}
+                              <span class="badge bg-success">Activo</span>
+                          {% else %}
+                              <span class="badge bg-danger">Inactivo</span>
+                          {% endif %}
+                      </td>
+                      <td class="text-center">
                         <a
                           href="{{ url_for('usuarios.editar_usuario', id=u.id) }}"
-                          class="btn btn-warning btn-sm px-3"
+                          class="btn btn-warning btn-sm px-2 mb-1"
+                          title="Editar"
                         >
-                          <i class="bi bi-pencil-square me-1"></i>
-                          Editar
+                          <i class="bi bi-pencil-square"></i>
                         </a>
+                        
+                        <form
+                          action="{{ url_for('usuarios.toggle_estado', id=u.id) }}"
+                          method="POST"
+                          class="d-inline"
+                        >
+                          <button type="submit" class="btn btn-sm px-2 mb-1 {% if u.activo %}btn-secondary{% else %}btn-success{% endif %}" title="{% if u.activo %}Deshabilitar{% else %}Habilitar{% endif %}">
+                            <i class="bi {% if u.activo %}bi-person-x{% else %}bi-person-check{% endif %}"></i>
+                          </button>
+                        </form>
+
                         <form
                           action="{{ url_for('usuarios.eliminar_usuario', id=u.id) }}"
                           method="POST"
@@ -184,9 +203,8 @@
                             );
                           "
                         >
-                          <button type="submit" class="btn btn-danger btn-sm px-3">
-                            <i class="bi bi-trash me-1"></i>
-                            Eliminar
+                          <button type="submit" class="btn btn-danger btn-sm px-2 mb-1" title="Eliminar">
+                            <i class="bi bi-trash"></i>
                           </button>
                         </form>
                       </td>

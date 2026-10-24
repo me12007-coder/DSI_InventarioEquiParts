@@ -20,14 +20,14 @@ def usuarios():
 
         try:
             hashed_password = generate_password_hash(password)
-            cursor.execute('INSERT INTO usuarios (username, password, rol, email) VALUES (%s, %s, %s, %s)', 
+            cursor.execute('INSERT INTO usuarios (username, password, rol, email, activo) VALUES (%s, %s, %s, %s, 1)', 
                          (username, hashed_password, rol, email))
             conn.commit()
             flash('Usuario creado exitosamente.', 'success')
         except Exception as e: 
             flash('Error: El nombre de usuario ya existe o los datos son inválidos.', 'danger')
             
-    cursor.execute('SELECT id, username, rol, email FROM usuarios')
+    cursor.execute('SELECT id, username, rol, email, activo FROM usuarios')
     u = cursor.fetchall()
     cursor.close()
     conn.close()
@@ -81,4 +81,39 @@ def eliminar_usuario(id):
     cursor.close()
     conn.close()
     flash('Usuario eliminado.', 'success')
+    return redirect(url_for('usuarios.usuarios'))
+
+@usuarios_bp.route('/toggle_estado/<int:id>', methods=['POST'])
+def toggle_estado(id):
+    if 'user_id' not in session or session.get('rol') != 'Administrador': 
+        return redirect(url_for('inventario.inventario'))
+        
+    if id == session['user_id']:
+        flash('No puedes deshabilitar tu propia cuenta.', 'danger')
+        return redirect(url_for('usuarios.usuarios'))
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("SELECT activo FROM usuarios WHERE id = %s", (id,))
+        usuario = cursor.fetchone()
+        
+        if usuario:
+            nuevo_estado = 0 if usuario['activo'] else 1
+            cursor.execute("UPDATE usuarios SET activo = %s WHERE id = %s", (nuevo_estado, id))
+            conn.commit()
+            
+            accion = "habilitado" if nuevo_estado else "deshabilitado"
+            flash(f'Usuario {accion} correctamente.', 'success')
+        else:
+            flash('Usuario no encontrado.', 'danger')
+            
+    except Exception as e:
+        conn.rollback()
+        flash(f'Error al cambiar el estado: {e}', 'danger')
+    finally:
+        cursor.close()
+        conn.close()
+        
     return redirect(url_for('usuarios.usuarios'))

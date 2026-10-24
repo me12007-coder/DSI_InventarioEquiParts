@@ -20,6 +20,11 @@ def login():
             conn.close()
         
         if user and check_password_hash(user['password'], request.form['password']):
+            # Verificación de estado del usuario
+            if 'activo' in user.keys() and not user['activo']:
+                flash('Esta cuenta ha sido deshabilitada. Contacta al administrador.', 'danger')
+                return redirect(url_for('auth.login'))
+                
             session.clear() # Limpiamos cualquier sesión previa por seguridad
             session.update({
                 'user_id': user['id'], 
