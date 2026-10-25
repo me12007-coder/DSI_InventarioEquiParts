@@ -6,6 +6,23 @@ from app.database import get_db_connection
 
 reportes_bp = Blueprint('reportes', __name__)
 
+# --- NUEVA FUNCIÓN DE VALIDACIÓN ---
+def validar_fechas(fecha_str_1, fecha_str_2=None):
+    """Retorna (es_valido, mensaje_error)"""
+    try:
+        dt1 = datetime.strptime(fecha_str_1, '%Y-%m-%d') if fecha_str_1 else None
+        dt2 = datetime.strptime(fecha_str_2, '%Y-%m-%d') if fecha_str_2 else None
+        
+        if (dt1 and dt1.year < 2024) or (dt2 and dt2.year < 2024):
+            return False, "No se permiten reportes con fechas anteriores al año 2024."
+            
+        if dt1 and dt2 and dt1 > dt2:
+            return False, "La fecha de inicio no puede ser mayor a la fecha de fin."
+            
+        return True, ""
+    except ValueError:
+        return False, "Formato de fecha inválido."
+
 @reportes_bp.route('/auditoria')
 def auditoria():
     if 'user_id' not in session or session.get('rol') != 'Administrador': 
@@ -116,22 +133,28 @@ def reporte_historico():
     if request.method == 'POST':
         fecha_consulta = request.form.get('fecha_limite')
         
+        # VALIDACIÓN AQUÍ
         if fecha_consulta:
+            valido, msg = validar_fechas(fecha_consulta)
+            if not valido:
+                flash(msg, 'danger')
+                cursor.close()
+                conn.close()
+                return redirect(url_for('reportes.reporte_historico'))
+                
             fecha_fin = f"{fecha_consulta} 23:59:59"
             cursor.execute('SELECT id, sku, nombre, descripcion, cantidad FROM productos WHERE activo = 1')
+            # ... (el resto del bucle for se mantiene exactamente igual) ...
             prod_actuales = cursor.fetchall()
             
             for p in prod_actuales:
                 cursor.execute('''SELECT tipo, cantidad FROM movimientos 
                                        WHERE producto_id = %s AND fecha > %s''', (p['id'], fecha_fin))
                 movs = cursor.fetchall()
-                
                 stock_historico = p['cantidad']
-                
                 for m in movs:
                     tipo = str(m['tipo'])
                     cant = m['cantidad']
-                    
                     if tipo == 'Entrada' or tipo.startswith('Devolución'):
                         stock_historico -= cant
                     elif tipo in ['Salida', 'Venta_Cotizacion']:
@@ -295,6 +318,13 @@ def flujo_valorizado():
     fecha_inicio = request.args.get('fecha_inicio', '')
     fecha_fin = request.args.get('fecha_fin', '')
     tipo_filtro = request.args.get('tipo_filtro', 'Todos')
+    
+    # --- INICIO DE VALIDACIÓN DE FECHAS ---
+    valido, msg = validar_fechas(fecha_inicio, fecha_fin)
+    if not valido:
+        flash(msg, 'danger')
+        return redirect(url_for('reportes.flujo_valorizado'))
+    # --- FIN DE VALIDACIÓN ---
     
     conn = get_db_connection()
     cursor = conn.cursor()

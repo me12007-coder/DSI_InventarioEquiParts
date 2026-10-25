@@ -52,11 +52,11 @@
             <form method="GET" action="{{ url_for('reportes.flujo_movimientos') }}" class="row g-3 align-items-end bg-white p-3 rounded border mb-4 esconder-impresion shadow-sm">
                 <div class="col-md-3">
                     <label class="form-label fw-bold small text-muted text-uppercase">Fecha Inicio</label>
-                    <input type="date" name="fecha_inicio" class="form-control" value="{{ fecha_inicio }}">
+                    <input type="date" name="fecha_inicio" class="form-control" min="2024-01-01" value="{{ fecha_inicio }}">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label fw-bold small text-muted text-uppercase">Fecha Fin</label>
-                    <input type="date" name="fecha_fin" class="form-control" value="{{ fecha_fin }}">
+                    <input type="date" name="fecha_fin" class="form-control" min="2024-01-01" value="{{ fecha_fin }}">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label fw-bold small text-muted text-uppercase">Tipo de Movimiento</label>

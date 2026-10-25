@@ -29,7 +29,7 @@
                         <form action="{{ url_for('reportes.reporte_historico') }}" method="POST" class="mt-auto">
                             <div class="input-group input-group-sm mb-2">
                                 <span class="input-group-text"><i class="bi bi-calendar-event"></i></span>
-                                <input type="date" name="fecha_limite" class="form-control" required>
+                                <input type="date" name="fecha_limite" class="form-control" min="2024-01-01" required>
                             </div>
                             <button type="submit" class="btn btn-sm w-100 fw-bold text-white" style="background-color: #5B708D;">Generar Reporte</button>
                         </form>
