@@ -30,6 +30,10 @@ try:
                             'WHERE p.activo = %s AND p.archivado = 0 AND (p.sku LIKE %s OR p.nombre LIKE %s)', 1)
     source = source.replace('UPDATE productos SET activo=1 WHERE id=%s AND activo=0',
                             'UPDATE productos SET activo=1 WHERE id=%s AND activo=0 AND archivado=0', 1)
+    # Recalcular el desplazamiento tras cambiar las consultas anteriores.
+    start = source.find("@inventario_bp.route('/producto/<int:id>/eliminar-definitivo', methods=['POST'])")
+    if start < 0:
+        raise ValueError('No se pudo localizar nuevamente el endpoint de retiro.')
     source = source[:start] + '''@inventario_bp.route('/producto/<int:id>/eliminar-definitivo', methods=['POST'])
 def borrar_producto_definitivo(id):
     """Retirada lógica: invisible en inventario, historial y claves externas intactos."""
