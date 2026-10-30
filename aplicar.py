@@ -1,41 +1,60 @@
 #!/usr/bin/env python3
-"""Parche conservador: CSRF en edición y stock solo lectura, sin tocar MariaDB."""
+"""Repara CSRF de formularios POST de detalle_producto.html; no altera BD."""
 from pathlib import Path
 from datetime import datetime, timezone
-import shutil, sys, re
-base=Path('/var/www/equiparts')
-html=base/'app/plantillas/editar_producto.html'
-py=base/'app/blueprints/inventario.py'
-backup=Path('/root/backups-equiparts')/('edicion_115_'+datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S'))
-try:
-    h=html.read_text(encoding='utf-8'); p=py.read_text(encoding='utf-8')
-    if '<form method="POST" enctype="multipart/form-data">' not in h: raise ValueError('Formulario distinto: no se parcheó.')
-    form_start=h.index('<form method="POST" enctype="multipart/form-data">')
-    form_end=h.index('</form>', form_start)
-    if '_csrf_token' not in h[form_start:form_end]:
-        h=h[:form_start]+h[form_start:].replace('<form method="POST" enctype="multipart/form-data">','<form method="POST" enctype="multipart/form-data">\n<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">',1)
-    pat=r'<input type="number" name="cantidad" class="form-control fw-bold fs-5" value="{{ p.cantidad }}" min="0" required>'
-    replacement='<output class="form-control fw-bold fs-5" aria-label="Stock físico actual">{{ p.cantidad }}</output>'
-    if pat not in h and replacement not in h: raise ValueError('Campo de stock inesperado: no se parcheó.')
-    h=h.replace(pat,replacement)
-    h=h.replace('Actualiza la información, existencias, ubicación y documentos asociados.','Actualiza la ficha, ubicación y documentos. Las existencias se registran en Entradas/Salidas.')
-    h=h.replace('Existencias, punto de alerta y precio del producto.','Stock de consulta, punto de alerta y precio del producto.')
-    h=h.replace('Unidades existentes en bodega.','Solo lectura: modifica el stock desde Entradas/Salidas.')
-    old='categoria_id = %s, cantidad = %s, stock_minimo = %s,'
-    new='categoria_id = %s, stock_minimo = %s,'
-    if old not in p and new not in p: raise ValueError('SQL de edición distinto: no se parcheó.')
-    p=p.replace(old,new,1)
-    expr="categoria_id, (int(data.get('cantidad', 0)) if prod_actual['activo'] else prod_actual['cantidad']), stock_minimo,"
-    replacement2='categoria_id, stock_minimo,'
-    if expr not in p and replacement2 not in p: raise ValueError('Parámetros de SQL diferentes: no se parcheó.')
-    p=p.replace(expr,replacement2,1)
-    compile(p, str(py), 'exec')
+import re, shutil, sys
+
+ROOT=Path('/var/www/equiparts')
+TEMPLATE=ROOT/'app/plantillas/detalle_producto.html'
+INIT=ROOT/'app/__init__.py'
+TOKEN='<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">'
+RX=re.compile(r'(<form\b[^>]*>)(.*?)(</form\s*>)', re.S|re.I)
+
+def fix(src):
+    counts=[0,0]
+    def replace(m):
+        start,content,end=m.groups()
+        if not re.search(r'\bmethod\s*=\s*[\'\"]post[\'\"]',start,re.I):
+            return m.group(0)
+        counts[0]+=1
+        if re.search(r'\bname\s*=\s*[\'\"]_csrf_token[\'\"]',content,re.I):
+            return m.group(0)
+        counts[1]+=1
+        return start+'\n            '+TOKEN+'\n'+content+end
+    return RX.sub(replace,src),counts
+
+def main():
+    if not INIT.is_file() or '_csrf_token' not in INIT.read_text(encoding='utf-8'):
+        raise RuntimeError('El control CSRF instalado no coincide con el esperado; no se aplica.')
+    original=TEMPLATE.read_text(encoding='utf-8')
+    if 'id="formTransaccion"' not in original:
+        raise RuntimeError('No se encontró formTransaccion; no se aplica.')
+    edited,counts=fix(original)
+    if counts[0]<1 or counts[0]>12:
+        raise RuntimeError('Cantidad inesperada de formularios POST; no se aplica.')
+    if re.search(r'<form[^>]*id="formTransaccion"',edited,re.I) is None:
+        raise RuntimeError('Falta el formulario de transacciones; no se aplica.')
+    if counts[1]==0:
+        print('Sin cambios: los formularios POST ya tienen token CSRF.')
+        return
+    try:
+        from jinja2 import Environment
+        Environment().parse(edited)
+    except Exception as exc:
+        raise RuntimeError(f'Plantilla Jinja no válida: {exc}')
+    backup=Path('/root/backups-equiparts')/('detalle_csrf_116_'+datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S'))
     backup.mkdir(parents=True,exist_ok=False)
-    shutil.copy2(html,backup/html.name);shutil.copy2(py,backup/py.name)
-    html.write_text(h,encoding='utf-8');py.write_text(p,encoding='utf-8')
-    print('APLICADO. Backup:',backup)
-    print('Edición: token CSRF, stock solo lectura; actualización SQL sin cantidad.')
-    print('Reinicia equiparts.service tras comprobar archivos.')
-except Exception as e:
-    print('NO APLICADO:',e,file=sys.stderr)
-    raise SystemExit(1)
+    shutil.copy2(TEMPLATE,backup/TEMPLATE.name)
+    tmp=TEMPLATE.with_name(TEMPLATE.name+'.tmp_116')
+    tmp.write_text(edited,encoding='utf-8')
+    shutil.copymode(TEMPLATE,tmp)
+    tmp.replace(TEMPLATE)
+    print(f'CORRECTO: {counts[1]} formularios POST corregidos de {counts[0]} detectados.')
+    print('Respaldo:',backup/TEMPLATE.name)
+    print('No se modificaron Python, contraseñas ni MariaDB.')
+
+if __name__=='__main__':
+    try: main()
+    except Exception as e:
+        print('NO APLICADO:',e,file=sys.stderr)
+        sys.exit(1)
