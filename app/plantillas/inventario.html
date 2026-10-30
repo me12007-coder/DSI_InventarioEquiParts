@@ -9,7 +9,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/inventario.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mojave-theme.css') }}" />
-  </head>
+      <link rel="stylesheet" href="{{ url_for('static', filename='css/material-expressive.css') }}" />
+</head>
   <body class="bg-light">
     {% include 'includes/navbar.html' %}
     
@@ -26,6 +27,9 @@
         </div>
 
         {% if session.get('rol') == 'Administrador' %}<div class="d-flex gap-2"><a class="btn btn-outline-secondary btn-sm" href="{{ url_for('inventario.inventario') }}">Activos</a><a class="btn btn-outline-warning btn-sm" href="{{ url_for('inventario.inventario',estado='inactivos') }}">Inactivos</a></div>{% endif %}
+        {% if session.get('rol') == 'Administrador' %}
+        <a class="btn btn-outline-primary btn-sm" href="{{ url_for('reportes.conciliacion') }}"><i class="bi bi-arrow-left-right"></i> Conciliar movimientos CSV</a>
+        {% endif %}
         <!-- CÁPSULA DINÁMICA DE ESTADO -->
         <div class="mx-auto">
             {% if stats.criticos == 0 %}
@@ -159,7 +163,8 @@
                         <button type="submit" class="btn btn-danger btn-sm">
                           <i class="bi bi-slash-circle me-1"></i> Desactivar
                         </button>
-                      </form>{% elif session.get('rol') == 'Administrador' and not p.activo %}<form action="{{ url_for('inventario.reactivar_producto', id=p.id) }}" method="POST" class="d-inline"><button class="btn btn-success btn-sm">Reactivar</button></form>{% endif %}
+                      </form>{% elif session.get('rol') == 'Administrador' and not p.activo %}<form action="{{ url_for('inventario.reactivar_producto', id=p.id) }}" method="POST" class="d-inline"><button class="btn btn-success btn-sm">Reactivar</button></form>
+                      <form action="{{ url_for('inventario.borrar_producto_definitivo', id=p.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Eliminar DEFINITIVAMENTE este producto solo si no tiene existencias ni movimientos. ¿Continuar?');"><button class="btn btn-outline-danger btn-sm">Eliminar</button></form>{% endif %}
                       {% endif %}
                     </td>
                   </tr>

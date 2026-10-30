@@ -853,3 +853,33 @@ def purgar_historial(id):
         mimetype="text/csv", 
         headers={"Content-Disposition": f"attachment;filename=Respaldo_Purga_{producto['sku']}.csv"}
     )
+
+@inventario_bp.route('/producto/<int:id>/eliminar-definitivo', methods=['POST'])
+def borrar_producto_definitivo(id):
+    """Borrado seguro: solo productos inactivos, sin existencias ni historial."""
+    if 'user_id' not in session or session.get('rol') != 'Administrador':
+        return redirect(url_for('inventario.inventario'))
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute('SELECT id,activo,cantidad,stock_reservado FROM productos WHERE id=%s FOR UPDATE', (id,))
+            p = cur.fetchone()
+            if not p:
+                flash('Producto inexistente.', 'warning')
+                return redirect(url_for('inventario.inventario', estado='inactivos'))
+            cur.execute('SELECT COUNT(*) AS total FROM movimientos WHERE producto_id=%s', (id,))
+            n = cur.fetchone()['total']
+            if p['activo'] or p['cantidad'] != 0 or p['stock_reservado'] != 0 or n:
+                flash('No se puede eliminar: debe estar inactivo, sin stock, reservas ni movimientos. Se conserva el historial.', 'warning')
+                return redirect(url_for('inventario.inventario', estado='inactivos'))
+            cur.execute('DELETE FROM producto_fotos WHERE producto_id=%s', (id,))
+            cur.execute('DELETE FROM productos WHERE id=%s', (id,))
+        conn.commit()
+        flash('Producto sin historial eliminado. Los archivos originales se conservan en disco.', 'success')
+    except Exception:
+        conn.rollback()
+        current_app.logger.exception('Error al eliminar producto sin historial')
+        flash('No se pudo eliminar. Puede haber referencias asociadas al producto.', 'danger')
+    finally:
+        conn.close()
+    return redirect(url_for('inventario.inventario', estado='inactivos'))

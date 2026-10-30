@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/inventario.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mojave-theme.css') }}" />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/material-expressive.css') }}" />
 </head>
 <body class="bg-light">
     {% include 'includes/navbar.html' %}
@@ -38,9 +39,9 @@
                 </div>
             </div>
             <div class="card-body border-bottom">
-                <form method="GET" action="{{ url_for('reportes.auditoria') }}" class="row g-2 align-items-end">
-                    <div class="col-md-3"><label class="form-label">Desde</label><input type="date" name="desde" class="form-control" value="{{ filtros.get('desde','') }}"></div>
-                    <div class="col-md-3"><label class="form-label">Hasta</label><input type="date" name="hasta" class="form-control" value="{{ filtros.get('hasta','') }}"></div>
+                <form id="formAuditoriaFiltros" method="GET" action="{{ url_for('reportes.auditoria') }}" class="row g-2 align-items-end">
+                    <div class="col-md-3"><label class="form-label">Desde</label><input type="date" name="desde" id="auditoriaDesde" class="form-control" value="{{ filtros.get('desde','') }}"></div>
+                    <div class="col-md-3"><label class="form-label">Hasta</label><input type="date" name="hasta" id="auditoriaHasta" class="form-control" value="{{ filtros.get('hasta','') }}"></div>
                     <div class="col-md-3"><label class="form-label">Usuario</label><select name="usuario_id" class="form-select"><option value="">Todos</option>{% for u in usuarios %}<option value="{{ u.id }}" {% if filtros.get('usuario_id','') == (u.id|string) %}selected{% endif %}>{{ u.username }}</option>{% endfor %}</select></div>
                     <div class="col-md-3 d-flex gap-2"><button class="btn btn-primary" type="submit">Filtrar</button><a class="btn btn-outline-secondary" href="{{ url_for('reportes.auditoria') }}">Limpiar</a></div>
                 </form><small class="text-muted">Vista limitada a 5000 registros; la exportación incluye todos los registros filtrados.</small>
@@ -129,5 +130,23 @@
             });
         }
     </script>
-</body>
+<script>
+(function(){
+ const inicio=document.getElementById('auditoriaDesde');
+ const fin=document.getElementById('auditoriaHasta');
+ const form=document.getElementById('formAuditoriaFiltros');
+ if(!inicio||!fin||!form)return;
+ function sync(){
+   fin.min=inicio.value||'';
+   inicio.max=fin.value||'';
+   const incorrecto=!!(inicio.value&&fin.value&&fin.value<inicio.value);
+   fin.setCustomValidity(incorrecto?'La fecha de fin no puede ser anterior al inicio.':'');
+   return !incorrecto;
+ }
+ inicio.addEventListener('change',sync);
+ fin.addEventListener('change',sync);
+ form.addEventListener('submit',e=>{if(!sync()){e.preventDefault();fin.reportValidity();}});
+ sync();
+})();
+</script></body>
 </html>
