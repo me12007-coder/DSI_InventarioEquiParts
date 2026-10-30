@@ -1,60 +1,79 @@
 #!/usr/bin/env python3
-"""Repara CSRF de formularios POST de detalle_producto.html; no altera BD."""
+"""Hotfix conservador para Equi-Parts: archivar sin romper referencias históricas.
+Requiere columna productos.archivado creada previamente (ver instrucciones).
+No ejecuta SQL ni reinicia servicios.
+"""
 from pathlib import Path
 from datetime import datetime, timezone
-import re, shutil, sys
+import sys, shutil
 
-ROOT=Path('/var/www/equiparts')
-TEMPLATE=ROOT/'app/plantillas/detalle_producto.html'
-INIT=ROOT/'app/__init__.py'
-TOKEN='<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">'
-RX=re.compile(r'(<form\b[^>]*>)(.*?)(</form\s*>)', re.S|re.I)
+BASE = Path('/var/www/equiparts')
+PYFILE = BASE / 'app/blueprints/inventario.py'
+HTML = BASE / 'app/plantillas/inventario.html'
+try:
+    source = PYFILE.read_text(encoding='utf-8')
+    page = HTML.read_text(encoding='utf-8')
+    if 'WHERE p.activo = %s AND (p.sku LIKE %s OR p.nombre LIKE %s)' not in source:
+        raise ValueError('La consulta del inventario ha cambiado; no se modificó nada.')
+    if "UPDATE productos SET activo=1 WHERE id=%s AND activo=0" not in source:
+        raise ValueError('La ruta de reactivación ha cambiado; no se modificó nada.')
+    start = source.find("@inventario_bp.route('/producto/<int:id>/eliminar-definitivo', methods=['POST'])")
+    if start < 0:
+        raise ValueError('No se encontró el endpoint de eliminar definitivo; no se modificó nada.')
+    # La ruta es la última sección en la versión revisada. No sobrescribimos código posterior.
+    if source.find('@inventario_bp.route(', start + 10) != -1:
+        raise ValueError('Hay más rutas tras eliminar-definitivo; se requiere revisión manual.')
+    if 'name="_csrf_token"' not in page:
+        raise ValueError('La plantilla no parece contener la corrección CSRF; se requiere revisión.')
 
-def fix(src):
-    counts=[0,0]
-    def replace(m):
-        start,content,end=m.groups()
-        if not re.search(r'\bmethod\s*=\s*[\'\"]post[\'\"]',start,re.I):
-            return m.group(0)
-        counts[0]+=1
-        if re.search(r'\bname\s*=\s*[\'\"]_csrf_token[\'\"]',content,re.I):
-            return m.group(0)
-        counts[1]+=1
-        return start+'\n            '+TOKEN+'\n'+content+end
-    return RX.sub(replace,src),counts
-
-def main():
-    if not INIT.is_file() or '_csrf_token' not in INIT.read_text(encoding='utf-8'):
-        raise RuntimeError('El control CSRF instalado no coincide con el esperado; no se aplica.')
-    original=TEMPLATE.read_text(encoding='utf-8')
-    if 'id="formTransaccion"' not in original:
-        raise RuntimeError('No se encontró formTransaccion; no se aplica.')
-    edited,counts=fix(original)
-    if counts[0]<1 or counts[0]>12:
-        raise RuntimeError('Cantidad inesperada de formularios POST; no se aplica.')
-    if re.search(r'<form[^>]*id="formTransaccion"',edited,re.I) is None:
-        raise RuntimeError('Falta el formulario de transacciones; no se aplica.')
-    if counts[1]==0:
-        print('Sin cambios: los formularios POST ya tienen token CSRF.')
-        return
+    source = source.replace('WHERE p.activo = %s AND (p.sku LIKE %s OR p.nombre LIKE %s)',
+                            'WHERE p.activo = %s AND p.archivado = 0 AND (p.sku LIKE %s OR p.nombre LIKE %s)', 1)
+    source = source.replace('UPDATE productos SET activo=1 WHERE id=%s AND activo=0',
+                            'UPDATE productos SET activo=1 WHERE id=%s AND activo=0 AND archivado=0', 1)
+    source = source[:start] + '''@inventario_bp.route('/producto/<int:id>/eliminar-definitivo', methods=['POST'])
+def borrar_producto_definitivo(id):
+    """Retirada lógica: invisible en inventario, historial y claves externas intactos."""
+    if 'user_id' not in session or session.get('rol') != 'Administrador':
+        return redirect(url_for('inventario.inventario'))
+    conn = get_db_connection()
     try:
-        from jinja2 import Environment
-        Environment().parse(edited)
-    except Exception as exc:
-        raise RuntimeError(f'Plantilla Jinja no válida: {exc}')
-    backup=Path('/root/backups-equiparts')/('detalle_csrf_116_'+datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S'))
-    backup.mkdir(parents=True,exist_ok=False)
-    shutil.copy2(TEMPLATE,backup/TEMPLATE.name)
-    tmp=TEMPLATE.with_name(TEMPLATE.name+'.tmp_116')
-    tmp.write_text(edited,encoding='utf-8')
-    shutil.copymode(TEMPLATE,tmp)
-    tmp.replace(TEMPLATE)
-    print(f'CORRECTO: {counts[1]} formularios POST corregidos de {counts[0]} detectados.')
-    print('Respaldo:',backup/TEMPLATE.name)
-    print('No se modificaron Python, contraseñas ni MariaDB.')
-
-if __name__=='__main__':
-    try: main()
-    except Exception as e:
-        print('NO APLICADO:',e,file=sys.stderr)
-        sys.exit(1)
+        with conn.cursor() as cur:
+            cur.execute('SELECT id,activo,cantidad,stock_reservado,archivado FROM productos WHERE id=%s FOR UPDATE', (id,))
+            p = cur.fetchone()
+            if not p:
+                flash('Producto inexistente.', 'warning')
+            elif p['archivado']:
+                flash('El producto ya estaba retirado.', 'warning')
+            elif p['activo'] or p['cantidad'] != 0 or p['stock_reservado'] != 0:
+                flash('Para retirar un producto debe estar inactivo, sin stock y sin reservas.', 'warning')
+            else:
+                cur.execute('UPDATE productos SET archivado=1, activo=0 WHERE id=%s AND archivado=0', (id,))
+                cur.execute('INSERT INTO movimientos (producto_id,usuario_id,tipo,cantidad) VALUES (%s,%s,%s,0)',
+                            (id, session['user_id'], 'Retiro definitivo del inventario'))
+                flash('Producto retirado del inventario. Los movimientos se conservaron para reportes.', 'success')
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        current_app.logger.exception('Error archivando producto')
+        flash('No se pudo retirar el producto. Revisa los registros.', 'danger')
+    finally:
+        conn.close()
+    return redirect(url_for('inventario.inventario', estado='inactivos'))
+'''
+    old = "Eliminar DEFINITIVAMENTE este producto solo si no tiene existencias ni movimientos. ¿Continuar?"
+    if old not in page:
+        raise ValueError('La confirmación del botón cambió; no se modificó nada.')
+    page = page.replace(old, 'Retirar este producto del inventario, conservando todos sus movimientos históricos. ¿Continuar?')
+    page = page.replace('>Eliminar</button>', '>Retirar</button>')
+    compile(source, str(PYFILE), 'exec')
+    backup = Path('/root/backups-equiparts') / ('archivado_117_' + datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S'))
+    backup.mkdir(parents=True, exist_ok=False)
+    shutil.copy2(PYFILE, backup/'inventario.py')
+    shutil.copy2(HTML, backup/'inventario.html')
+    PYFILE.write_text(source, encoding='utf-8')
+    HTML.write_text(page, encoding='utf-8')
+    print('Parche aplicado. Copias de código en:', backup)
+    print('La base de datos NO se modificó mediante este script.')
+except Exception as exc:
+    print('NO APLICADO:', str(exc), file=sys.stderr)
+    raise SystemExit(1)
