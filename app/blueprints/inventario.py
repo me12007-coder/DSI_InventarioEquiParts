@@ -5,10 +5,12 @@ from datetime import datetime
 import os
 import csv
 import io
+from uuid import uuid4
+from PIL import Image, UnidentifiedImageError
+from werkzeug.exceptions import RequestEntityTooLarge
 
 # Importaciones locales de tu arquitectura
 from app.database import get_db_connection
-from app.validation import entero, importe
 from app.services.email_service import enviar_alerta_stock
 
 inventario_bp = Blueprint('inventario', __name__)
@@ -23,12 +25,10 @@ def inventario():
     if request.method == 'POST' and session.get('rol') in ['Administrador', 'Bodeguero']:
         foto = request.files.get('foto')
         pdf = request.files.get('pdf')
-        foto_path = secure_filename(foto.filename) if foto and foto.filename else ""
+        foto_path = ""
         pdf_path = secure_filename(pdf.filename) if pdf and pdf.filename else ""
         
         # Guardar archivos
-        if foto_path: 
-            foto.save(os.path.join(current_app.config['UPLOAD_FOLDER'], foto_path))
         if pdf_path: 
             pdf.save(os.path.join(current_app.config['UPLOAD_FOLDER'], pdf_path))
 
@@ -42,9 +42,9 @@ def inventario():
             
         nombre = str(data.get('nombre', '')).strip()
         descripcion = str(data.get('descripcion', '')).strip()
-        cantidad = entero(data.get('cantidad', 0), 'Cantidad')
-        stock_minimo = entero(data.get('stock_minimo', 5), 'Stock mínimo') 
-        precio = importe(data.get('precio', 0.0))
+        cantidad = int(data.get('cantidad', 0))
+        stock_minimo = int(data.get('stock_minimo', 5)) 
+        precio = float(data.get('precio', 0.0))
         ubicacion = str(data.get('ubicacion', '')).strip()
         cat_id_raw = data.get('categoria_id')
         categoria_id = int(cat_id_raw) if cat_id_raw else None
@@ -55,6 +55,7 @@ def inventario():
                               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 1)''',
                            (sku, nombre, descripcion, cantidad, stock_minimo, precio, categoria_id, ubicacion, foto_path, pdf_path))
             nuevo_id = cursor.lastrowid
+            guardar_fotos_galeria(cursor, nuevo_id, [foto] + request.files.getlist('fotos'))
             
             cursor.execute('''INSERT INTO movimientos (producto_id, usuario_id, tipo, cantidad) 
                               VALUES (%s, %s, 'Creación de Producto', %s)''', 
@@ -67,11 +68,12 @@ def inventario():
             cursor.close()
 
     busqueda = request.args.get('q', '')
+    mostrar_inactivos = session.get('rol') == 'Administrador' and request.args.get('estado') == 'inactivos'
     query = '''SELECT p.*, c.nombre as categoria_nombre FROM productos p 
                LEFT JOIN categorias c ON p.categoria_id = c.id
-               WHERE p.activo = 1 AND (p.sku LIKE %s OR p.nombre LIKE %s)'''
+               WHERE p.activo = %s AND (p.sku LIKE %s OR p.nombre LIKE %s)'''
     cursor = conn.cursor()
-    cursor.execute(query, ('%'+busqueda+'%', '%'+busqueda+'%'))
+    cursor.execute(query, (0 if mostrar_inactivos else 1, '%'+busqueda+'%', '%'+busqueda+'%'))
     productos = cursor.fetchall()
     
     cursor.execute('SELECT * FROM categorias')
@@ -105,7 +107,7 @@ def inventario():
     # Renderizamos pasando el nuevo diccionario stats
     return render_template('inventario.html', productos=productos, categorias=categorias, 
                            username=session.get('username'), rol=session.get('rol'), 
-                           busqueda=busqueda, alertas_stock=alertas_stock, stats=stats)
+                           busqueda=busqueda, alertas_stock=alertas_stock, stats=stats, mostrar_inactivos=mostrar_inactivos)
 
 
 @inventario_bp.route('/editar_producto/<int:id>', methods=['GET', 'POST'])
@@ -120,9 +122,9 @@ def editar_producto(id):
         data = request.form
         cat_raw = data.get('categoria_id')
         categoria_id = int(cat_raw) if cat_raw else None
-        stock_minimo = entero(data.get('stock_minimo', 5), 'Stock mínimo')
+        stock_minimo = int(data.get('stock_minimo', 5))
         
-        cursor.execute('SELECT foto, ficha_pdf FROM productos WHERE id = %s', (id,))
+        cursor.execute('SELECT foto, ficha_pdf, activo, cantidad FROM productos WHERE id = %s FOR UPDATE', (id,))
         prod_actual = cursor.fetchone()
         foto_path = prod_actual['foto'] if prod_actual['foto'] else ""
         pdf_path = prod_actual['ficha_pdf'] if prod_actual['ficha_pdf'] else ""
@@ -131,13 +133,9 @@ def editar_producto(id):
         pdf = request.files.get('pdf')
         
         if foto and foto.filename:
-            if prod_actual['foto']:
-                vieja_ruta_foto = os.path.join(current_app.config['UPLOAD_FOLDER'], prod_actual['foto'])
-                if os.path.exists(vieja_ruta_foto):
-                    os.remove(vieja_ruta_foto)
-            foto_path = secure_filename(foto.filename)
-            foto.save(os.path.join(current_app.config['UPLOAD_FOLDER'], foto_path))
-            
+            # Las fotos nuevas se incorporan a la galería sin borrar fotos antiguas.
+            pass
+
         if pdf and pdf.filename:
             if prod_actual['ficha_pdf']:
                 vieja_ruta_pdf = os.path.join(current_app.config['UPLOAD_FOLDER'], prod_actual['ficha_pdf'])
@@ -150,10 +148,18 @@ def editar_producto(id):
                           ubicacion = %s, categoria_id = %s, cantidad = %s, stock_minimo = %s,
                           foto = %s, ficha_pdf = %s
                           WHERE id = %s''', 
-                     (str(data.get('nombre')), str(data.get('descripcion')), importe(data.get('precio')), 
-                      str(data.get('ubicacion')), categoria_id, entero(data.get('cantidad', 0), 'Cantidad'), stock_minimo, 
+                     (str(data.get('nombre')), str(data.get('descripcion')), float(data.get('precio')), 
+                      str(data.get('ubicacion')), categoria_id, (int(data.get('cantidad', 0)) if prod_actual['activo'] else prod_actual['cantidad']), stock_minimo, 
                       foto_path, pdf_path, id))
-        conn.commit()
+        try:
+            guardar_fotos_galeria(cursor, id, [foto] + request.files.getlist('fotos'))
+            conn.commit()
+        except (ValueError, OSError) as error:
+            conn.rollback()
+            flash('No se guardó la ficha: ' + str(error), 'danger')
+            cursor.close()
+            conn.close()
+            return redirect(url_for('inventario.editar_producto', id=id))
         flash('Ficha del producto actualizada correctamente.', 'success')
         cursor.close()
         conn.close()
@@ -165,11 +171,18 @@ def editar_producto(id):
     c = cursor.fetchall()
     cursor.close()
     conn.close()
-    return render_template('editar_producto.html', p=p, categorias=c)
+    cursor_g = get_db_connection()
+    try:
+        with cursor_g.cursor() as cg:
+            cg.execute('SELECT id, archivo, principal FROM producto_fotos WHERE producto_id=%s ORDER BY principal DESC, id', (id,))
+            galeria = cg.fetchall()
+    finally:
+        cursor_g.close()
+    return render_template('editar_producto.html', p=p, categorias=c, galeria=galeria)
 
 @inventario_bp.route('/eliminar_producto/<int:id>', methods=['POST'])
 def eliminar_producto(id):
-    if 'user_id' not in session or session.get('rol') not in ['Administrador', 'Bodeguero']: 
+    if 'user_id' not in session or session.get('rol') != 'Administrador': 
         return redirect(url_for('inventario.inventario'))
     
     conn = get_db_connection()
@@ -177,16 +190,95 @@ def eliminar_producto(id):
     try:
         cursor.execute('UPDATE productos SET activo = 0 WHERE id = %s', (id,))
         cursor.execute('''INSERT INTO movimientos (producto_id, usuario_id, tipo, cantidad) 
-                        VALUES (%s, %s, 'Eliminación de Producto', 0)''', 
+                        VALUES (%s, %s, 'Desactivación de Producto', 0)''', 
                      (id, session['user_id']))
         conn.commit()
-        flash('Producto eliminado.', 'success')
+        flash('Producto desactivado. Ya no admite movimientos.', 'success')
     except Exception as e: 
         flash(f'Error: {str(e)}', 'danger')
         
     cursor.close()
     conn.close()
     return redirect(url_for('inventario.inventario'))
+
+@inventario_bp.route('/reactivar_producto/<int:id>', methods=['POST'])
+def reactivar_producto(id):
+    if 'user_id' not in session or session.get('rol') != 'Administrador':
+        return redirect(url_for('inventario.inventario'))
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute('UPDATE productos SET activo=1 WHERE id=%s AND activo=0', (id,))
+            if cursor.rowcount:
+                cursor.execute('INSERT INTO movimientos (producto_id,usuario_id,tipo,cantidad) VALUES (%s,%s,%s,0)',
+                               (id,session['user_id'],'Reactivación de Producto'))
+        conn.commit()
+        flash('Producto reactivado.', 'success')
+    except Exception:
+        conn.rollback()
+        flash('No se pudo reactivar el repuesto.', 'danger')
+    finally:
+        conn.close()
+    return redirect(url_for('inventario.inventario', estado='inactivos'))
+
+
+def guardar_fotos_galeria(cursor, producto_id, files):
+    """Valida contenido real, guarda imágenes normalizadas y registra la galería."""
+    from pathlib import Path
+    carpeta = Path(current_app.config['UPLOAD_FOLDER'])
+    carpeta.mkdir(parents=True, exist_ok=True)
+    cursor.execute('SELECT COUNT(*) AS n FROM producto_fotos WHERE producto_id=%s', (producto_id,))
+    presentes = cursor.fetchone()['n']
+    nuevas = [f for f in files if f and f.filename]
+    if len(nuevas) + presentes > 12:
+        raise ValueError('Máximo 12 fotos por producto.')
+    for f in nuevas:
+        if len(f.read(8 * 1024 * 1024 + 1)) > 8 * 1024 * 1024:
+            raise ValueError('Cada foto debe pesar menos de 8 MB.')
+        f.stream.seek(0)
+        try:
+            with Image.open(f.stream) as im:
+                im.verify()
+            f.stream.seek(0)
+            with Image.open(f.stream) as im:
+                if im.format not in ('JPEG','PNG','WEBP') or im.width * im.height > 24_000_000:
+                    raise ValueError('Solo JPEG, PNG o WEBP de hasta 24 megapíxeles.')
+                im.thumbnail((1800,1800))
+                im = im.convert('RGB')
+                nombre = 'repuesto_' + uuid4().hex + '.jpg'
+                im.save(carpeta / nombre, format='JPEG', quality=85)
+        except (UnidentifiedImageError, OSError) as exc:
+            raise ValueError('Imagen inválida.') from exc
+        cursor.execute('INSERT INTO producto_fotos (producto_id,archivo,principal) VALUES (%s,%s,%s)',
+                       (producto_id,nombre,0 if presentes else 1))
+        if not presentes:
+            cursor.execute('UPDATE productos SET foto=%s WHERE id=%s', (nombre,producto_id))
+        presentes += 1
+
+
+@inventario_bp.route('/producto/<int:id>/foto_principal/<int:foto_id>', methods=['POST'])
+def foto_principal(id,foto_id):
+    if session.get('rol') not in ('Administrador','Bodeguero') or 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute('SELECT archivo FROM producto_fotos WHERE id=%s AND producto_id=%s', (foto_id,id))
+            foto = cursor.fetchone()
+            if not foto:
+                flash('Foto no encontrada.', 'danger')
+                return redirect(url_for('inventario.editar_producto',id=id))
+            cursor.execute('UPDATE producto_fotos SET principal=0 WHERE producto_id=%s', (id,))
+            cursor.execute('UPDATE producto_fotos SET principal=1 WHERE id=%s', (foto_id,))
+            cursor.execute('UPDATE productos SET foto=%s WHERE id=%s', (foto['archivo'],id))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        flash('No se pudo cambiar la foto principal.', 'danger')
+    finally:
+        conn.close()
+    return redirect(url_for('inventario.editar_producto',id=id))
+
 
 @inventario_bp.route('/categorias', methods=['GET', 'POST'])
 def categorias():
@@ -266,23 +358,27 @@ def detalle_producto(id):
 
     if request.method == 'POST':
         tipo = request.form.get('tipo_movimiento', request.form.get('tipo'))
-        cantidad_mov = entero(request.form.get('cantidad'), 'Cantidad del movimiento', minimo=0 if tipo == 'Ajuste' else 1)
-        cursor.execute('SELECT nombre, sku, cantidad, stock_reservado, stock_minimo FROM productos WHERE id = %s AND activo = 1 FOR UPDATE', (id,))
-        if not (p := cursor.fetchone()):
+        cantidad_mov = int(request.form['cantidad'])
+        cursor.execute('SELECT nombre, sku, cantidad, stock_reservado, stock_minimo, activo FROM productos WHERE id = %s FOR UPDATE', (id,))
+        p = cursor.fetchone()
+        if not p or not p['activo']:
+            conn.rollback()
             cursor.close()
             conn.close()
-            flash('Producto no disponible.', 'danger')
+            flash('Producto inactivo o inexistente: movimiento bloqueado.', 'danger')
             return redirect(url_for('inventario.inventario'))
+        if cantidad_mov < 0 or (cantidad_mov == 0 and tipo != 'Ajuste'):
+            conn.rollback()
+            cursor.close()
+            conn.close()
+            flash('Cantidad inválida.', 'danger')
+            return redirect(url_for('inventario.detalle_producto', id=id))
         
         stock_fisico = p['cantidad']
         stock_reservado = p['stock_reservado']
         stock_disponible = stock_fisico - stock_reservado
         error = False
 
-        if session.get('rol') not in ('Administrador','Bodeguero','Vendedor'):
-            cursor.close()
-            conn.close()
-            return redirect(url_for('inventario.inventario'))
         if tipo == 'Cotizacion':
             if cantidad_mov > stock_disponible:
                 flash('Error: No hay suficiente stock disponible para reservar.', 'danger')
@@ -427,6 +523,11 @@ def detalle_producto(id):
 
     cursor.execute('SELECT p.*, c.nombre as categoria_nombre FROM productos p LEFT JOIN categorias c ON p.categoria_id = c.id WHERE p.id = %s', (id,))
     producto = cursor.fetchone()
+    if not producto or (not producto['activo'] and session.get('rol') == 'Vendedor'):
+        cursor.close()
+        conn.close()
+        flash('Producto no disponible.', 'warning')
+        return redirect(url_for('inventario.inventario'))
     cursor.execute('''SELECT m.*, u.username FROM movimientos m 
                                 JOIN usuarios u ON m.usuario_id = u.id 
                                 WHERE m.producto_id = %s ORDER BY m.fecha DESC''', (id,))
@@ -461,11 +562,13 @@ def detalle_producto(id):
     ventas_chart = [row['total_ventas'] for row in tendencia]
     mermas_chart = [row['total_mermas'] for row in tendencia]
     
+    cursor.execute('SELECT id,archivo,principal FROM producto_fotos WHERE producto_id=%s ORDER BY principal DESC,id', (id,))
+    galeria = cursor.fetchall()
     cursor.close()
     conn.close()
     
     return render_template('detalle_producto.html', 
-                           p=producto, 
+                           p=producto, galeria=galeria,
                            movimientos=historial,
                            total_dañados=int(total_dañados),
                            fechas_chart=fechas_chart,
@@ -512,7 +615,7 @@ def importar_csv():
     if file.filename == '':
         return redirect(url_for('inventario.inventario'))
 
-    if file and file.filename.lower().endswith('.csv'):
+    if file and file.filename.endswith('.csv'):
         try:
             stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
             csv_input = csv.reader(stream)
@@ -522,22 +625,18 @@ def importar_csv():
             cursor = conn.cursor()
             productos_importados = 0
             
-            for numero_fila, row in enumerate(csv_input, start=2):
-                if row and len(row) < 5:
-                    raise ValueError(f'Fila {numero_fila}: faltan campos requeridos.')
+            for row in csv_input:
                 if len(row) >= 5:
                     sku = str(row[0]).strip()
                     nombre = str(row[1]).strip()
                     descripcion = str(row[2]).strip() if len(row) > 2 else ""
-                    cantidad = entero(row[3], f'Fila {numero_fila}, cantidad')
-                    precio = importe(row[4], f'Fila {numero_fila}, precio')
-                    categoria_id = entero(row[5], f'Fila {numero_fila}, categoría', minimo=1) if len(row) > 5 and row[5].strip() else None
+                    cantidad = int(row[3]) if len(row) > 3 and row[3].isdigit() else 0
+                    precio = float(row[4]) if len(row) > 4 and row[4].replace('.', '', 1).isdigit() else 0.0
+                    categoria_id = int(row[5]) if len(row) > 5 and row[5].isdigit() else None
                     ubicacion = str(row[6]).strip() if len(row) > 6 else "Bodega Central"
                     
-                    stock_minimo = entero(row[7], f'Fila {numero_fila}, mínimo') if len(row) > 7 and row[7].strip() else 5
+                    stock_minimo = int(row[7]) if len(row) > 7 and row[7].isdigit() else 5
 
-                    if not sku or not nombre:
-                        raise ValueError(f'Fila {numero_fila}: SKU y nombre son obligatorios.')
                     try:
                         cursor.execute('''INSERT INTO productos (sku, nombre, descripcion, cantidad, stock_minimo, precio, categoria_id, ubicacion, activo)
                                           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 1)''',
@@ -548,8 +647,8 @@ def importar_csv():
                                           VALUES (%s, %s, 'Importación Masiva (CSV)', %s)''',
                                        (nuevo_id, session['user_id'], cantidad))
                         productos_importados += 1
-                    except Exception as ex:
-                        raise ValueError(f'Fila {numero_fila}: producto repetido o datos inválidos: {type(ex).__name__}') from ex
+                    except Exception:
+                        pass
 
             conn.commit()
             cursor.close()
@@ -561,9 +660,6 @@ def importar_csv():
                 flash('No se importó ningún producto (Revise el formato o SKUs duplicados).', 'warning')
                 
         except Exception as e:
-            if 'conn' in locals():
-                conn.rollback()
-                conn.close()
             flash(f'Error al procesar el archivo CSV: {str(e)}', 'danger')
     else:
         flash('Formato no válido. Suba un archivo .csv', 'danger')
@@ -589,11 +685,12 @@ def api_filtrar_productos():
     cursor = conn.cursor()
     cat_id = request.args.get('categoria_id', '')
     busqueda = request.args.get('q', '')
+    mostrar_inactivos = session.get('rol') == 'Administrador' and request.args.get('estado') == 'inactivos'
 
     query = '''SELECT p.*, c.nombre as categoria_nombre FROM productos p 
                LEFT JOIN categorias c ON p.categoria_id = c.id
-               WHERE p.activo = 1'''
-    params = []
+               WHERE p.activo = %s'''
+    params = [0 if mostrar_inactivos else 1]
 
     if cat_id:
         query += ' AND p.categoria_id = %s'
@@ -610,6 +707,7 @@ def api_filtrar_productos():
     for p in productos:
         prod_list.append({
             'id': p['id'],
+            'activo': p['activo'],
             'sku': p['sku'],
             'nombre': p['nombre'],
             'cantidad': p['cantidad'],

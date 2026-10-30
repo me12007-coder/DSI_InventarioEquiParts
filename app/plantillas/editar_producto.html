@@ -9,8 +9,6 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/inventario.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mojave-theme.css') }}" />
-<link rel="stylesheet" href="{{ url_for('static', filename='css/material-expressive.css') }}">
-<script defer src="{{ url_for('static', filename='js/validacion-formularios.js') }}"></script>
 </head>
 <body class="bg-light">
     {% include 'includes/navbar.html' %}
@@ -36,7 +34,6 @@
                 </div>
 
                 <form method="POST" enctype="multipart/form-data">
-<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <section class="form-section section-blue">
                         <div class="section-heading">
                             <span class="section-heading-icon"><i class="bi bi-card-list"></i></span>
@@ -153,7 +150,12 @@
                                           <span>No hay fotografía cargada.</span>
                                         {% endif %}
                                     </div>
-                                    <input class="form-control" type="file" name="foto" accept="image/*">
+                                    <input class="form-control" type="file" name="foto" accept="image/jpeg,image/png,image/webp">
+                                    <label class="form-label mt-2">Añadir más fotografías</label>
+                                    <input class="form-control" type="file" name="fotos" multiple accept="image/jpeg,image/png,image/webp">
+                                    <div class="d-flex flex-wrap gap-2 mt-3">{% for foto in galeria %}
+                                      <div class="border p-2 rounded"><img src="{{ url_for('static', filename='archivos/' ~ foto.archivo) }}" style="height:80px;max-width:120px;object-fit:contain" alt="Foto del repuesto"><div>{% if foto.principal %}<small>Principal</small>{% else %}<button type="submit" formaction="{{ url_for('inventario.foto_principal', id=p.id, foto_id=foto.id) }}" formnovalidate class="btn btn-outline-primary btn-sm">Principal</button>{% endif %}</div></div>
+                                    {% endfor %}</div>
                                     <small class="text-muted d-block mt-2">Déjalo vacío si deseas conservar la imagen actual.</small>
                                 </div>
                             </div>

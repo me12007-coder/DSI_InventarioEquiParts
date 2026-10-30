@@ -9,9 +9,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/inventario.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mojave-theme.css') }}" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/material-expressive.css') }}">
-<script defer src="{{ url_for('static', filename='js/validacion-formularios.js') }}"></script>
-</head>
+  </head>
   <body class="bg-light">
     {% include 'includes/navbar.html' %}
     
@@ -27,6 +25,7 @@
           </div>
         </div>
 
+        {% if session.get('rol') == 'Administrador' %}<div class="d-flex gap-2"><a class="btn btn-outline-secondary btn-sm" href="{{ url_for('inventario.inventario') }}">Activos</a><a class="btn btn-outline-warning btn-sm" href="{{ url_for('inventario.inventario',estado='inactivos') }}">Inactivos</a></div>{% endif %}
         <!-- CÁPSULA DINÁMICA DE ESTADO -->
         <div class="mx-auto">
             {% if stats.criticos == 0 %}
@@ -156,12 +155,11 @@
                       <a href="{{ url_for('inventario.editar_producto', id=p.id) }}" class="btn btn-warning btn-sm">
                         <i class="bi bi-pencil-fill me-1"></i> Editar
                       </a>
-                      <form action="{{ url_for('inventario.eliminar_producto', id=p.id) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Eliminar producto y su historial?');">
-<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                      {% if session.get('rol') == 'Administrador' and p.activo %}<form action="{{ url_for('inventario.eliminar_producto', id=p.id) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Desactivar producto? Se conservará el historial.');">
                         <button type="submit" class="btn btn-danger btn-sm">
-                          <i class="bi bi-trash-fill me-1"></i> Eliminar
+                          <i class="bi bi-slash-circle me-1"></i> Desactivar
                         </button>
-                      </form>
+                      </form>{% elif session.get('rol') == 'Administrador' and not p.activo %}<form action="{{ url_for('inventario.reactivar_producto', id=p.id) }}" method="POST" class="d-inline"><button class="btn btn-success btn-sm">Reactivar</button></form>{% endif %}
                       {% endif %}
                     </td>
                   </tr>
@@ -192,7 +190,6 @@
           </div>
           <div class="modal-body bg-light">
             <form method="POST" enctype="multipart/form-data">
-<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
               <div class="row">
                 <div class="col-md-6">
                   <h6 class="seccion-formulario mt-0"><i class="bi bi-card-list me-2"></i>Información General</h6>
@@ -216,7 +213,7 @@
                       <span class="upload-icon"><i class="bi bi-image"></i></span>
                       <div><div class="fw-bold small">Fotografía</div><small class="text-muted">Imagen del repuesto</small></div>
                     </div>
-                    <input type="file" name="foto" class="form-control" accept="image/*" />
+                    <input type="file" name="foto" class="form-control" accept="image/jpeg,image/png,image/webp" /><label class="form-label mt-2">Fotos adicionales (hasta 12)</label><input type="file" name="fotos" multiple class="form-control" accept="image/jpeg,image/png,image/webp" />
                   </div>
                   <div class="upload-card pdf">
                     <div class="upload-card-head mb-2">
@@ -241,7 +238,7 @@
                   </div>
 
                   <label class="form-label small fw-bold mt-2"><i class="bi bi-cash-stack me-1"></i>Precio Venta ($)</label>
-                  <input type="number" step="0.01" name="precio" class="form-control mb-2" required / min="0">
+                  <input type="number" step="0.01" name="precio" class="form-control mb-2" required />
                   
                   <label class="form-label small fw-bold"><i class="bi bi-geo-alt me-1"></i>Ubicación Física (Pasillo/Estante)</label>
                   <input type="text" name="ubicacion" class="form-control mb-4" />
@@ -268,7 +265,6 @@
           <div class="modal-body p-4 text-center">
             <i class="bi bi-cloud-upload display-1 text-muted mb-3 d-block"></i>
             <form action="{{ url_for('inventario.importar_csv') }}" method="POST" enctype="multipart/form-data">
-<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
               <input class="form-control mb-3" type="file" name="archivo_csv" accept=".csv" required />
               <button type="submit" class="btn btn-accent-teal w-100 mb-2">
                 <i class="bi bi-upload me-1"></i> Cargar Masivamente
@@ -343,7 +339,8 @@
         window.aplicarFiltros = function() {
             const params = new URLSearchParams({
                 q: filtroBuscar.value,
-                categoria_id: filtroCategoria.value
+                categoria_id: filtroCategoria.value,
+                estado: new URLSearchParams(window.location.search).get('estado') || ''
             });
 
             fetch(`/api/productos/filtrar?${params.toString()}`)
@@ -386,13 +383,17 @@
                         if (userRol === 'Administrador' || userRol === 'Bodeguero') {
                             botonesAccion += `
                                 <a href="/editar_producto/${p.id}" class="btn btn-warning btn-sm"><i class="bi bi-pencil-fill me-1"></i>Editar</a>
-                                <form action="/eliminar_producto/${p.id}" method="POST" class="d-inline" onsubmit="return confirm('¿Eliminar producto y su historial?');">
-<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-trash-fill me-1"></i> Eliminar</button>
+                                <form action="/eliminar_producto/${p.id}" method="POST" class="d-inline" onsubmit="return confirm('¿Desactivar producto? No se eliminará el historial.');">
+                                    <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-trash-fill me-1"></i> Desactivar</button>
                                 </form>
                             `;
                         }
 
+                        if (userRol === 'Administrador' && !p.activo) {
+                            botonesAccion = `<a href="/editar_producto/${p.id}" class="btn btn-warning btn-sm">Editar</a> <form action="/reactivar_producto/${p.id}" method="POST" class="d-inline"><button type="submit" class="btn btn-success btn-sm">Reactivar</button></form>`;
+                        } else if (userRol !== 'Administrador') {
+                            botonesAccion = botonesAccion.replace(/<form[\s\S]*?<\/form>/, '');
+                        }
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
                             <td><strong>${p.sku}</strong><br />${p.nombre}</td>

@@ -10,8 +10,6 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/inventario.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mojave-theme.css') }}" />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<link rel="stylesheet" href="{{ url_for('static', filename='css/material-expressive.css') }}">
-<script defer src="{{ url_for('static', filename='js/validacion-formularios.js') }}"></script>
 </head>
 <body class="bg-light">
     {% include 'includes/navbar.html' %}
@@ -24,13 +22,13 @@
                     <small class="text-muted">Auditoría y trazabilidad del inventario</small>
                 </div>
                 <div class="d-flex gap-2">
-                    <a href="{{ url_for('reportes.exportar_auditoria') }}" class="btn btn-primary btn-sm fw-bold">
+                    <a class="btn btn-outline-success btn-sm" href="{{ url_for('reportes.conciliacion') }}">Conciliar CSV</a>
+                    <a href="{{ url_for('reportes.exportar_auditoria', desde=filtros.get('desde',''), hasta=filtros.get('hasta',''), usuario_id=filtros.get('usuario_id','')) }}" class="btn btn-primary btn-sm fw-bold">
                         <i class="bi bi-download me-1"></i> Exportar CSV
                     </a>
                     
                     {% if session['rol'] == 'Administrador' %}
                     <form id="formPurgarGlobal" action="{{ url_for('reportes.purgar_auditoria_global') }}" method="POST" target="_blank" style="display: none;">
-<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <input type="password" name="password_admin" id="inputPasswordAdminGlobal">
                     </form>
                     <button type="button" onclick="confirmarPurgaGlobal()" class="btn btn-sm fw-bold shadow-sm text-white" style="background-color: #c4775d; border-color: #c4775d;">
@@ -38,6 +36,14 @@
                     </button>
                     {% endif %}
                 </div>
+            </div>
+            <div class="card-body border-bottom">
+                <form method="GET" action="{{ url_for('reportes.auditoria') }}" class="row g-2 align-items-end">
+                    <div class="col-md-3"><label class="form-label">Desde</label><input type="date" name="desde" class="form-control" value="{{ filtros.get('desde','') }}"></div>
+                    <div class="col-md-3"><label class="form-label">Hasta</label><input type="date" name="hasta" class="form-control" value="{{ filtros.get('hasta','') }}"></div>
+                    <div class="col-md-3"><label class="form-label">Usuario</label><select name="usuario_id" class="form-select"><option value="">Todos</option>{% for u in usuarios %}<option value="{{ u.id }}" {% if filtros.get('usuario_id','') == (u.id|string) %}selected{% endif %}>{{ u.username }}</option>{% endfor %}</select></div>
+                    <div class="col-md-3 d-flex gap-2"><button class="btn btn-primary" type="submit">Filtrar</button><a class="btn btn-outline-secondary" href="{{ url_for('reportes.auditoria') }}">Limpiar</a></div>
+                </form><small class="text-muted">Vista limitada a 5000 registros; la exportación incluye todos los registros filtrados.</small>
             </div>
             <div class="card-body p-0">
                 <table class="table table-striped table-hover align-middle mb-0" style="font-size: 0.9em;">
@@ -70,8 +76,8 @@
                                     <span class="text-success fw-bold">✅ Venta desde Reserva</span>
                                 {% elif log.tipo == 'Salida' %}
                                     <span class="text-danger fw-bold">🛒 Salida Directa</span>
-                                {% elif log.tipo == 'Eliminación de Producto' %}
-                                    <span class="text-danger fw-bold">🗑️ Eliminación de Sistema</span>
+                                {% elif log.tipo in ['Eliminación de Producto','Desactivación de Producto','Reactivación de Producto'] %}
+                                    <span class="text-danger fw-bold">Cambio de disponibilidad</span>
                                 {% else %}
                                     {{ log.tipo }}
                                 {% endif %}

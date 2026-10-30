@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, session, Response, flash, request
 import csv
 import io
-from datetime import datetime, date
+from datetime import datetime
 from app.database import get_db_connection
 
 reportes_bp = Blueprint('reportes', __name__)
@@ -16,8 +16,6 @@ def validar_fechas(fecha_str_1, fecha_str_2=None):
         if (dt1 and dt1.year < 2024) or (dt2 and dt2.year < 2024):
             return False, "No se permiten reportes con fechas anteriores al año 2024."
             
-        if (dt1 and dt1.date() > date.today()) or (dt2 and dt2.date() > date.today()):
-            return False, "No se permiten fechas futuras en los reportes históricos."
         if dt1 and dt2 and dt1 > dt2:
             return False, "La fecha de inicio no puede ser mayor a la fecha de fin."
             
@@ -25,51 +23,86 @@ def validar_fechas(fecha_str_1, fecha_str_2=None):
     except ValueError:
         return False, "Formato de fecha inválido."
 
+def _filtros_auditoria():
+    inicio = request.args.get('desde', '').strip()
+    fin = request.args.get('hasta', '').strip()
+    uid = request.args.get('usuario_id', '').strip()
+    valido, mensaje = validar_fechas(inicio, fin)
+    if not valido:
+        raise ValueError(mensaje)
+    condiciones, parametros = [], []
+    if inicio:
+        condiciones.append('m.fecha >= %s')
+        parametros.append(inicio + ' 00:00:00')
+    if fin:
+        from datetime import timedelta
+        siguiente = (datetime.strptime(fin, '%Y-%m-%d') + timedelta(days=1)).strftime('%Y-%m-%d')
+        condiciones.append('m.fecha < %s')
+        parametros.append(siguiente + ' 00:00:00')
+    if uid:
+        if not uid.isdecimal():
+            raise ValueError('Usuario inválido.')
+        condiciones.append('m.usuario_id = %s')
+        parametros.append(int(uid))
+    return (' WHERE ' + ' AND '.join(condiciones)) if condiciones else '', parametros
+
+
 @reportes_bp.route('/auditoria')
 def auditoria():
-    if 'user_id' not in session or session.get('rol') != 'Administrador': 
-        flash('No tienes permisos para ver la auditoría.', 'danger')
+    if 'user_id' not in session or session.get('rol') != 'Administrador':
         return redirect(url_for('inventario.inventario'))
-    
+    try:
+        where, params = _filtros_auditoria()
+    except ValueError as error:
+        flash(str(error), 'danger')
+        return redirect(url_for('reportes.auditoria'))
     conn = get_db_connection()
-    cursor = conn.cursor()
-    query = '''SELECT m.id AS transaccion_id, m.fecha, m.tipo, m.cantidad, 
-               u.username, u.rol, p.sku, p.nombre
-               FROM movimientos m 
-               LEFT JOIN usuarios u ON m.usuario_id = u.id 
-               LEFT JOIN productos p ON m.producto_id = p.id
-               ORDER BY m.fecha DESC'''
-    cursor.execute(query)
-    logs = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return render_template('auditoria.html', logs=logs, username=session.get('username'))
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute('SELECT id, username FROM usuarios ORDER BY username')
+            usuarios = cursor.fetchall()
+            cursor.execute('''SELECT m.id AS transaccion_id, m.fecha, m.tipo, m.cantidad,
+                       u.username, u.rol, p.sku, p.nombre
+                       FROM movimientos m LEFT JOIN usuarios u ON m.usuario_id = u.id
+                       LEFT JOIN productos p ON m.producto_id = p.id'''+where+
+                       ' ORDER BY m.fecha DESC, m.id DESC LIMIT 5000', params)
+            logs = cursor.fetchall()
+    finally:
+        conn.close()
+    return render_template('auditoria.html', logs=logs, usuarios=usuarios,
+                           filtros=request.args, username=session.get('username'))
+
 
 @reportes_bp.route('/exportar_auditoria')
 def exportar_auditoria():
-    if 'user_id' not in session or session.get('rol') != 'Administrador': 
+    if 'user_id' not in session or session.get('rol') != 'Administrador':
         return redirect(url_for('inventario.inventario'))
-    
+    try:
+        where, params = _filtros_auditoria()
+    except ValueError as error:
+        flash(str(error), 'danger')
+        return redirect(url_for('reportes.auditoria'))
     conn = get_db_connection()
-    cursor = conn.cursor()
-    query = '''SELECT m.id, m.fecha, u.username, u.rol, m.tipo, p.sku, p.nombre, m.cantidad
-               FROM movimientos m 
-               LEFT JOIN usuarios u ON m.usuario_id = u.id 
-               LEFT JOIN productos p ON m.producto_id = p.id
-               ORDER BY m.fecha DESC'''
-    cursor.execute(query)
-    logs = cursor.fetchall()
-    cursor.close()
-    conn.close()
-
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute('''SELECT m.id, m.fecha, u.username, u.rol, m.tipo, p.sku, p.nombre, m.cantidad
+                       FROM movimientos m LEFT JOIN usuarios u ON m.usuario_id = u.id
+                       LEFT JOIN productos p ON m.producto_id = p.id'''+where+
+                       ' ORDER BY m.fecha DESC, m.id DESC', params)
+            logs = cursor.fetchall()
+    finally:
+        conn.close()
     si = io.StringIO()
     cw = csv.writer(si)
     cw.writerow(['ID Transaccion', 'Fecha', 'Usuario', 'Rol', 'Operacion', 'SKU', 'Repuesto', 'Cantidad'])
+    def safe(v):
+        t = str(v if v is not None else '')
+        return "'" + t if t.lstrip().startswith(('=', '+', '-', '@', '\t', '\r')) else t
     for log in logs:
-        cw.writerow([log['id'], log['fecha'], log['username'], log['rol'], log['tipo'], log['sku'], log['nombre'], log['cantidad']])
-    
-    output = si.getvalue()
-    return Response(output, mimetype="text/csv", headers={"Content-Disposition": "attachment;filename=auditoria_movimientos.csv"})
+        cw.writerow([safe(log.get(k)) for k in ('id','fecha','username','rol','tipo','sku','nombre','cantidad')])
+    return Response('\ufeff'+si.getvalue(), mimetype='text/csv; charset=utf-8',
+                    headers={'Content-Disposition':'attachment;filename=auditoria_filtrada.csv'})
+
 
 @reportes_bp.route('/generar_reporte')
 def generar_reporte():
@@ -181,10 +214,6 @@ def exportar_historico_csv():
         return redirect(url_for('inventario.inventario'))
     
     fecha_consulta = request.args.get('fecha')
-    valido, mensaje = validar_fechas(fecha_consulta)
-    if not valido:
-        flash(mensaje, 'danger')
-        return redirect(url_for('reportes.reporte_historico'))
     if not fecha_consulta:
         return redirect(url_for('reportes.reporte_historico'))
         
@@ -228,10 +257,6 @@ def flujo_movimientos():
     
     fecha_inicio = request.args.get('fecha_inicio', '')
     fecha_fin = request.args.get('fecha_fin', '')
-    valido, mensaje = validar_fechas(fecha_inicio, fecha_fin)
-    if not valido:
-        flash(mensaje, 'danger')
-        return redirect(url_for('reportes.flujo_movimientos'))
     tipo_filtro = request.args.get('tipo_filtro', 'Todos')
     
     conn = get_db_connection()
@@ -279,10 +304,6 @@ def exportar_flujo_csv():
         
     fecha_inicio = request.args.get('fecha_inicio', '')
     fecha_fin = request.args.get('fecha_fin', '')
-    valido, mensaje = validar_fechas(fecha_inicio, fecha_fin)
-    if not valido:
-        flash(mensaje, 'danger')
-        return redirect(url_for('reportes.flujo_movimientos'))
     tipo_filtro = request.args.get('tipo_filtro', 'Todos')
     
     conn = get_db_connection()
@@ -390,10 +411,6 @@ def exportar_flujo_valorizado_csv():
         
     fecha_inicio = request.args.get('fecha_inicio', '')
     fecha_fin = request.args.get('fecha_fin', '')
-    valido, mensaje = validar_fechas(fecha_inicio, fecha_fin)
-    if not valido:
-        flash(mensaje, 'danger')
-        return redirect(url_for('reportes.flujo_movimientos'))
     tipo_filtro = request.args.get('tipo_filtro', 'Todos')
     
     conn = get_db_connection()
@@ -440,10 +457,6 @@ def estado_financiero():
     
     fecha_inicio = request.args.get('fecha_inicio', '')
     fecha_fin = request.args.get('fecha_fin', '')
-    valido, mensaje = validar_fechas(fecha_inicio, fecha_fin)
-    if not valido:
-        flash(mensaje, 'danger')
-        return redirect(url_for('reportes.flujo_movimientos'))
     
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -639,3 +652,85 @@ def purgar_auditoria_global():
         mimetype="text/csv", 
         headers={"Content-Disposition": f"attachment;filename=Respaldo_Maestro_Auditoria_{datetime.now().strftime('%Y%m%d')}.csv"}
     )
+
+@reportes_bp.route('/conciliacion', methods=['GET', 'POST'])
+def conciliacion():
+    # Comparación SOLO LECTURA de movimientos CSV vs MariaDB
+    if 'user_id' not in session or session.get('rol') != 'Administrador':
+        return redirect(url_for('inventario.inventario'))
+    diferencias, resumen = [], None
+    if request.method == 'POST':
+        archivo = request.files.get('csv')
+        if not archivo or not archivo.filename.lower().endswith('.csv'):
+            flash('Seleccione un archivo CSV.', 'danger')
+            return redirect(url_for('reportes.conciliacion'))
+        contenido = archivo.stream.read(2 * 1024 * 1024 + 1)
+        if len(contenido) > 2 * 1024 * 1024:
+            flash('CSV demasiado grande: máximo 2 MB.', 'danger')
+            return redirect(url_for('reportes.conciliacion'))
+        try:
+            from collections import Counter, defaultdict
+            from datetime import date
+            texto = contenido.decode('utf-8-sig')
+            reader = csv.DictReader(io.StringIO(texto))
+            if not reader.fieldnames:
+                raise ValueError('El CSV está vacío.')
+            reader.fieldnames = [k.strip().lower() for k in reader.fieldnames]
+            requeridos = {'fecha','sku','tipo','cantidad'}
+            if not requeridos.issubset(set(reader.fieldnames)):
+                raise ValueError('Columnas obligatorias: fecha,sku,tipo,cantidad')
+            filas = []
+            for n, row in enumerate(reader, start=2):
+                if n > 5002:
+                    raise ValueError('Máximo 5000 filas de movimientos.')
+                fecha = (row['fecha'] or '').strip()
+                fecha = datetime.strptime(fecha[:10], '%Y-%m-%d').date().isoformat()
+                sku = (row['sku'] or '').strip().upper()
+                tipo = (row['tipo'] or '').strip()
+                cantidad = int((row['cantidad'] or '').strip())
+                if not sku or not tipo:
+                    raise ValueError('SKU o tipo vacío en fila ' + str(n))
+                filas.append((fecha, sku, tipo, cantidad))
+            if not filas:
+                raise ValueError('CSV sin registros.')
+            inicio = min(x[0] for x in filas)
+            fin = max(x[0] for x in filas)
+            conn = get_db_connection()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute('''SELECT DATE_FORMAT(m.fecha, '%%Y-%%m-%%d') AS dia,
+                               p.sku, m.tipo, m.cantidad
+                               FROM movimientos m LEFT JOIN productos p ON m.producto_id=p.id
+                               WHERE m.fecha >= %s AND m.fecha < DATE_ADD(%s, INTERVAL 1 DAY)''',
+                                (inicio, fin))
+                    sistema = [(r['dia'], (r['sku'] or '').upper(), r['tipo'], int(r['cantidad'])) for r in cur.fetchall()]
+            finally:
+                conn.close()
+            manual = Counter(filas)
+            interno = Counter(sistema)
+            for clave in sorted(set(manual) | set(interno)):
+                a,b = manual[clave], interno[clave]
+                if a != b:
+                    diferencias.append(dict(fecha=clave[0], sku=clave[1], tipo=clave[2],
+                                            cantidad=clave[3], manual=a, sistema=b, diferencia=a-b))
+            # Resumen por repuesto y clase de operación, útil para cuadrar cantidades.
+            acumulado = defaultdict(lambda: [0,0])
+            for (fecha,sku,tipo,cantidad),n in manual.items():
+                acumulado[(sku,tipo)][0] += cantidad*n
+            for (fecha,sku,tipo,cantidad),n in interno.items():
+                acumulado[(sku,tipo)][1] += cantidad*n
+            resumen = [dict(sku=sku,tipo=tipo,manual=v[0],sistema=v[1],diferencia=v[0]-v[1])
+                       for (sku,tipo),v in sorted(acumulado.items()) if v[0]!=v[1]]
+            flash('Comparación realizada sin modificar inventario ni movimientos.', 'success')
+        except (ValueError, UnicodeError, csv.Error, TypeError) as err:
+            flash('CSV inválido: ' + str(err), 'danger')
+    return render_template('conciliacion.html', diferencias=diferencias, resumen=resumen)
+
+
+@reportes_bp.route('/conciliacion/plantilla')
+def plantilla_conciliacion():
+    if 'user_id' not in session or session.get('rol') != 'Administrador':
+        return redirect(url_for('inventario.inventario'))
+    return Response('fecha,sku,tipo,cantidad\n2026-10-30,EX-001,Salida,2\n',
+                    mimetype='text/csv; charset=utf-8',
+                    headers={'Content-Disposition':'attachment;filename=plantilla_conciliacion.csv'})
