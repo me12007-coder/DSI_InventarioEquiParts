@@ -18,6 +18,11 @@ def usuarios():
         rol = str(request.form['rol'])
         email = str(request.form.get('email', '')).strip() # Capturamos el nuevo campo
 
+        if not username or len(username) > 80 or len(password) < 12 or len(password) > 256 or rol not in ('Administrador', 'Bodeguero', 'Vendedor') or len(email) > 254 or (email and ('@' not in email or ' ' in email)):
+            flash('Revisa el nombre, rol y correo. La contraseña debe tener 12–256 caracteres.', 'danger')
+            cursor.close()
+            conn.close()
+            return redirect(url_for('usuarios.usuarios'))
         try:
             hashed_password = generate_password_hash(password)
             cursor.execute('INSERT INTO usuarios (username, password, rol, email, activo) VALUES (%s, %s, %s, %s, 1)', 
@@ -45,6 +50,11 @@ def editar_usuario(id):
         nuevo_rol = request.form.get('rol')
         nuevo_email = str(request.form.get('email', '')).strip() # Capturamos el correo editado
         
+        if nuevo_rol not in ('Administrador', 'Bodeguero', 'Vendedor') or len(nuevo_email) > 254 or (nuevo_email and ('@' not in nuevo_email or ' ' in nuevo_email)) or (nueva_clave and not 12 <= len(nueva_clave) <= 256):
+            flash('Rol, correo o contraseña inválidos (mínimo 12 caracteres).', 'danger')
+            cursor.close()
+            conn.close()
+            return redirect(url_for('usuarios.usuarios'))
         if nueva_clave:
             hashed_password = generate_password_hash(nueva_clave)
             cursor.execute('UPDATE usuarios SET password = %s, rol = %s, email = %s WHERE id = %s', 

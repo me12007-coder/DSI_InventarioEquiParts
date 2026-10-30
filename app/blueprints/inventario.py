@@ -8,6 +8,7 @@ import io
 
 # Importaciones locales de tu arquitectura
 from app.database import get_db_connection
+from app.validation import entero, importe
 from app.services.email_service import enviar_alerta_stock
 
 inventario_bp = Blueprint('inventario', __name__)
@@ -41,9 +42,9 @@ def inventario():
             
         nombre = str(data.get('nombre', '')).strip()
         descripcion = str(data.get('descripcion', '')).strip()
-        cantidad = int(data.get('cantidad', 0))
-        stock_minimo = int(data.get('stock_minimo', 5)) 
-        precio = float(data.get('precio', 0.0))
+        cantidad = entero(data.get('cantidad', 0), 'Cantidad')
+        stock_minimo = entero(data.get('stock_minimo', 5), 'Stock mínimo') 
+        precio = importe(data.get('precio', 0.0))
         ubicacion = str(data.get('ubicacion', '')).strip()
         cat_id_raw = data.get('categoria_id')
         categoria_id = int(cat_id_raw) if cat_id_raw else None
@@ -119,7 +120,7 @@ def editar_producto(id):
         data = request.form
         cat_raw = data.get('categoria_id')
         categoria_id = int(cat_raw) if cat_raw else None
-        stock_minimo = int(data.get('stock_minimo', 5))
+        stock_minimo = entero(data.get('stock_minimo', 5), 'Stock mínimo')
         
         cursor.execute('SELECT foto, ficha_pdf FROM productos WHERE id = %s', (id,))
         prod_actual = cursor.fetchone()
@@ -149,8 +150,8 @@ def editar_producto(id):
                           ubicacion = %s, categoria_id = %s, cantidad = %s, stock_minimo = %s,
                           foto = %s, ficha_pdf = %s
                           WHERE id = %s''', 
-                     (str(data.get('nombre')), str(data.get('descripcion')), float(data.get('precio')), 
-                      str(data.get('ubicacion')), categoria_id, int(data.get('cantidad', 0)), stock_minimo, 
+                     (str(data.get('nombre')), str(data.get('descripcion')), importe(data.get('precio')), 
+                      str(data.get('ubicacion')), categoria_id, entero(data.get('cantidad', 0), 'Cantidad'), stock_minimo, 
                       foto_path, pdf_path, id))
         conn.commit()
         flash('Ficha del producto actualizada correctamente.', 'success')
@@ -265,15 +266,23 @@ def detalle_producto(id):
 
     if request.method == 'POST':
         tipo = request.form.get('tipo_movimiento', request.form.get('tipo'))
-        cantidad_mov = int(request.form['cantidad'])
-        cursor.execute('SELECT nombre, sku, cantidad, stock_reservado, stock_minimo FROM productos WHERE id = %s', (id,))
-        p = cursor.fetchone()
+        cantidad_mov = entero(request.form.get('cantidad'), 'Cantidad del movimiento', minimo=0 if tipo == 'Ajuste' else 1)
+        cursor.execute('SELECT nombre, sku, cantidad, stock_reservado, stock_minimo FROM productos WHERE id = %s AND activo = 1 FOR UPDATE', (id,))
+        if not (p := cursor.fetchone()):
+            cursor.close()
+            conn.close()
+            flash('Producto no disponible.', 'danger')
+            return redirect(url_for('inventario.inventario'))
         
         stock_fisico = p['cantidad']
         stock_reservado = p['stock_reservado']
         stock_disponible = stock_fisico - stock_reservado
         error = False
 
+        if session.get('rol') not in ('Administrador','Bodeguero','Vendedor'):
+            cursor.close()
+            conn.close()
+            return redirect(url_for('inventario.inventario'))
         if tipo == 'Cotizacion':
             if cantidad_mov > stock_disponible:
                 flash('Error: No hay suficiente stock disponible para reservar.', 'danger')
@@ -503,7 +512,7 @@ def importar_csv():
     if file.filename == '':
         return redirect(url_for('inventario.inventario'))
 
-    if file and file.filename.endswith('.csv'):
+    if file and file.filename.lower().endswith('.csv'):
         try:
             stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
             csv_input = csv.reader(stream)
@@ -513,18 +522,22 @@ def importar_csv():
             cursor = conn.cursor()
             productos_importados = 0
             
-            for row in csv_input:
+            for numero_fila, row in enumerate(csv_input, start=2):
+                if row and len(row) < 5:
+                    raise ValueError(f'Fila {numero_fila}: faltan campos requeridos.')
                 if len(row) >= 5:
                     sku = str(row[0]).strip()
                     nombre = str(row[1]).strip()
                     descripcion = str(row[2]).strip() if len(row) > 2 else ""
-                    cantidad = int(row[3]) if len(row) > 3 and row[3].isdigit() else 0
-                    precio = float(row[4]) if len(row) > 4 and row[4].replace('.', '', 1).isdigit() else 0.0
-                    categoria_id = int(row[5]) if len(row) > 5 and row[5].isdigit() else None
+                    cantidad = entero(row[3], f'Fila {numero_fila}, cantidad')
+                    precio = importe(row[4], f'Fila {numero_fila}, precio')
+                    categoria_id = entero(row[5], f'Fila {numero_fila}, categoría', minimo=1) if len(row) > 5 and row[5].strip() else None
                     ubicacion = str(row[6]).strip() if len(row) > 6 else "Bodega Central"
                     
-                    stock_minimo = int(row[7]) if len(row) > 7 and row[7].isdigit() else 5
+                    stock_minimo = entero(row[7], f'Fila {numero_fila}, mínimo') if len(row) > 7 and row[7].strip() else 5
 
+                    if not sku or not nombre:
+                        raise ValueError(f'Fila {numero_fila}: SKU y nombre son obligatorios.')
                     try:
                         cursor.execute('''INSERT INTO productos (sku, nombre, descripcion, cantidad, stock_minimo, precio, categoria_id, ubicacion, activo)
                                           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 1)''',
@@ -535,8 +548,8 @@ def importar_csv():
                                           VALUES (%s, %s, 'Importación Masiva (CSV)', %s)''',
                                        (nuevo_id, session['user_id'], cantidad))
                         productos_importados += 1
-                    except Exception:
-                        pass
+                    except Exception as ex:
+                        raise ValueError(f'Fila {numero_fila}: producto repetido o datos inválidos: {type(ex).__name__}') from ex
 
             conn.commit()
             cursor.close()
@@ -548,6 +561,9 @@ def importar_csv():
                 flash('No se importó ningún producto (Revise el formato o SKUs duplicados).', 'warning')
                 
         except Exception as e:
+            if 'conn' in locals():
+                conn.rollback()
+                conn.close()
             flash(f'Error al procesar el archivo CSV: {str(e)}', 'danger')
     else:
         flash('Formato no válido. Suba un archivo .csv', 'danger')

@@ -9,7 +9,9 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/inventario.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mojave-theme.css') }}" />
-  </head>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/material-expressive.css') }}">
+<script defer src="{{ url_for('static', filename='js/validacion-formularios.js') }}"></script>
+</head>
   <body class="bg-light">
     {% include 'includes/navbar.html' %}
     
@@ -155,6 +157,7 @@
                         <i class="bi bi-pencil-fill me-1"></i> Editar
                       </a>
                       <form action="{{ url_for('inventario.eliminar_producto', id=p.id) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Eliminar producto y su historial?');">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="btn btn-danger btn-sm">
                           <i class="bi bi-trash-fill me-1"></i> Eliminar
                         </button>
@@ -189,6 +192,7 @@
           </div>
           <div class="modal-body bg-light">
             <form method="POST" enctype="multipart/form-data">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
               <div class="row">
                 <div class="col-md-6">
                   <h6 class="seccion-formulario mt-0"><i class="bi bi-card-list me-2"></i>Información General</h6>
@@ -237,7 +241,7 @@
                   </div>
 
                   <label class="form-label small fw-bold mt-2"><i class="bi bi-cash-stack me-1"></i>Precio Venta ($)</label>
-                  <input type="number" step="0.01" name="precio" class="form-control mb-2" required />
+                  <input type="number" step="0.01" name="precio" class="form-control mb-2" required / min="0">
                   
                   <label class="form-label small fw-bold"><i class="bi bi-geo-alt me-1"></i>Ubicación Física (Pasillo/Estante)</label>
                   <input type="text" name="ubicacion" class="form-control mb-4" />
@@ -264,6 +268,7 @@
           <div class="modal-body p-4 text-center">
             <i class="bi bi-cloud-upload display-1 text-muted mb-3 d-block"></i>
             <form action="{{ url_for('inventario.importar_csv') }}" method="POST" enctype="multipart/form-data">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
               <input class="form-control mb-3" type="file" name="archivo_csv" accept=".csv" required />
               <button type="submit" class="btn btn-accent-teal w-100 mb-2">
                 <i class="bi bi-upload me-1"></i> Cargar Masivamente
@@ -382,6 +387,7 @@
                             botonesAccion += `
                                 <a href="/editar_producto/${p.id}" class="btn btn-warning btn-sm"><i class="bi bi-pencil-fill me-1"></i>Editar</a>
                                 <form action="/eliminar_producto/${p.id}" method="POST" class="d-inline" onsubmit="return confirm('¿Eliminar producto y su historial?');">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-trash-fill me-1"></i> Eliminar</button>
                                 </form>
                             `;

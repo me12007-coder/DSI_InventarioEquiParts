@@ -23,6 +23,8 @@
         .encabezado-impresion { display: none; }
     </style>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mojave-theme.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/material-expressive.css') }}">
+<script defer src="{{ url_for('static', filename='js/validacion-formularios.js') }}"></script>
 </head>
 <body class="bg-light">
     {% include 'includes/navbar.html' %}
@@ -48,6 +50,7 @@
             <p class="text-muted mb-4 esconder-impresion">Calcula el stock existente (reconstrucción matemática) hasta el final del día seleccionado.</p>
             
             <form method="POST" class="row g-3 align-items-end bg-white p-3 rounded border mb-4 esconder-impresion shadow-sm">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <div class="col-md-4">
                     <label class="form-label fw-bold small text-muted text-uppercase">Seleccione la Fecha Límite</label>
                     <input type="date" name="fecha_limite" class="form-control" min="2024-01-01" required value="{{ fecha_consulta }}">

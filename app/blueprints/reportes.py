@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, session, Response, flash, request
 import csv
 import io
-from datetime import datetime
+from datetime import datetime, date
 from app.database import get_db_connection
 
 reportes_bp = Blueprint('reportes', __name__)
@@ -16,6 +16,8 @@ def validar_fechas(fecha_str_1, fecha_str_2=None):
         if (dt1 and dt1.year < 2024) or (dt2 and dt2.year < 2024):
             return False, "No se permiten reportes con fechas anteriores al año 2024."
             
+        if (dt1 and dt1.date() > date.today()) or (dt2 and dt2.date() > date.today()):
+            return False, "No se permiten fechas futuras en los reportes históricos."
         if dt1 and dt2 and dt1 > dt2:
             return False, "La fecha de inicio no puede ser mayor a la fecha de fin."
             
@@ -179,6 +181,10 @@ def exportar_historico_csv():
         return redirect(url_for('inventario.inventario'))
     
     fecha_consulta = request.args.get('fecha')
+    valido, mensaje = validar_fechas(fecha_consulta)
+    if not valido:
+        flash(mensaje, 'danger')
+        return redirect(url_for('reportes.reporte_historico'))
     if not fecha_consulta:
         return redirect(url_for('reportes.reporte_historico'))
         
@@ -222,6 +228,10 @@ def flujo_movimientos():
     
     fecha_inicio = request.args.get('fecha_inicio', '')
     fecha_fin = request.args.get('fecha_fin', '')
+    valido, mensaje = validar_fechas(fecha_inicio, fecha_fin)
+    if not valido:
+        flash(mensaje, 'danger')
+        return redirect(url_for('reportes.flujo_movimientos'))
     tipo_filtro = request.args.get('tipo_filtro', 'Todos')
     
     conn = get_db_connection()
@@ -269,6 +279,10 @@ def exportar_flujo_csv():
         
     fecha_inicio = request.args.get('fecha_inicio', '')
     fecha_fin = request.args.get('fecha_fin', '')
+    valido, mensaje = validar_fechas(fecha_inicio, fecha_fin)
+    if not valido:
+        flash(mensaje, 'danger')
+        return redirect(url_for('reportes.flujo_movimientos'))
     tipo_filtro = request.args.get('tipo_filtro', 'Todos')
     
     conn = get_db_connection()
@@ -376,6 +390,10 @@ def exportar_flujo_valorizado_csv():
         
     fecha_inicio = request.args.get('fecha_inicio', '')
     fecha_fin = request.args.get('fecha_fin', '')
+    valido, mensaje = validar_fechas(fecha_inicio, fecha_fin)
+    if not valido:
+        flash(mensaje, 'danger')
+        return redirect(url_for('reportes.flujo_movimientos'))
     tipo_filtro = request.args.get('tipo_filtro', 'Todos')
     
     conn = get_db_connection()
@@ -422,6 +440,10 @@ def estado_financiero():
     
     fecha_inicio = request.args.get('fecha_inicio', '')
     fecha_fin = request.args.get('fecha_fin', '')
+    valido, mensaje = validar_fechas(fecha_inicio, fecha_fin)
+    if not valido:
+        flash(mensaje, 'danger')
+        return redirect(url_for('reportes.flujo_movimientos'))
     
     conn = get_db_connection()
     cursor = conn.cursor()

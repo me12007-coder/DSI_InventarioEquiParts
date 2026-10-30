@@ -18,6 +18,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/inventario.css') }}" />
       <link rel="stylesheet" href="{{ url_for('static', filename='css/mojave-theme.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/material-expressive.css') }}">
+<script defer src="{{ url_for('static', filename='js/validacion-formularios.js') }}"></script>
 </head>
   <body class="bg-light">
     {% include 'includes/navbar.html' %}
@@ -121,7 +123,8 @@
               <i class="bi bi-arrow-left-right me-2" style="color: #7B8088;"></i> Módulo de Transacciones
             </div>
             <div class="card-body">
-            <form id="formTransaccion" action="{{ url_for('inventario.detalle_producto', id=p.id) }}" method="POST">                
+            <form id="formTransaccion" action="{{ url_for('inventario.detalle_producto', id=p.id) }}" method="POST">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">                
                 <label class="form-label fw-semibold text-muted small text-uppercase"><i class="bi bi-gear-wide-connected"></i> Tipo de Operación</label>
                 <div class="mb-3">
                   <select name="tipo_movimiento" id="tipoMovimiento" class="form-select border-secondary" required>
@@ -197,6 +200,7 @@
                 <!-- BOTÓN Y FORM DE PURGA (SOLO ADMIN) -->
                 {% if session['rol'] == 'Administrador' %}
                 <form id="formPurgar" action="{{ url_for('inventario.purgar_historial', id=p.id) }}" method="POST" target="_blank" style="display: none;">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <input type="password" name="password_admin" id="inputPasswordAdmin">
                 </form>
                 <button type="button" onclick="confirmarPurga()" class="btn btn-sm btn-outline-danger fw-bold shadow-sm esconder-impresion ms-2" title="Purgar Historial">

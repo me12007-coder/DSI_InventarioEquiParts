@@ -39,6 +39,8 @@
       }
       if (triggerLabel) triggerLabel.textContent = current === 'dark' ? 'Oscuro' : 'Claro';
 
+      picker.querySelectorAll('[data-set-style]').forEach(option => option.addEventListener('click', () => applyStyle(option.dataset.setStyle, root.dataset.accent, true)));
+      picker.querySelectorAll('[data-set-accent]').forEach(option => option.addEventListener('click', () => applyStyle(root.dataset.uiStyle, option.dataset.setAccent, true)));
       picker.querySelectorAll('[data-set-theme]').forEach((option) => {
         const selected = option.dataset.setTheme === current;
         option.classList.toggle('active', selected);
@@ -62,6 +64,19 @@
     window.dispatchEvent(new CustomEvent('equiparts:themechange', { detail: { theme: current } }));
   }
 
+  const accents = ['blue','green','lilac','pink','peach'];
+  function applyStyle(style, accent, persist) {
+    style = style === 'expressive' ? 'expressive' : 'classic';
+    accent = accents.includes(accent) ? accent : 'blue';
+    root.dataset.uiStyle = style;
+    root.dataset.accent = accent;
+    if (persist) { try { localStorage.setItem('equiparts-style', style); localStorage.setItem('equiparts-accent', accent); } catch (_) {} }
+    document.querySelectorAll('[data-set-style]').forEach(b => {b.classList.toggle('active', b.dataset.setStyle === style); b.setAttribute('aria-pressed', String(b.dataset.setStyle === style));});
+    document.querySelectorAll('[data-set-accent]').forEach(b => {b.classList.toggle('active', b.dataset.setAccent === accent); b.setAttribute('aria-pressed', String(b.dataset.setAccent === accent));});
+  }
+  const loadPref = key => { try { return localStorage.getItem(key); } catch (_) { return null; } };
+  applyStyle(loadPref('equiparts-style'), loadPref('equiparts-accent'), false);
+
   // Se ejecuta antes de pintar el body para evitar el destello del tema claro.
   applyTheme(savedTheme(), false);
 
@@ -77,7 +92,7 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     applyTheme(savedTheme(), false);
-
+    applyStyle(loadPref('equiparts-style'), loadPref('equiparts-accent'), false);
     document.querySelectorAll('[data-theme-switcher]').forEach((picker) => {
       const trigger = picker.querySelector('[data-theme-trigger]');
       if (!trigger) return;

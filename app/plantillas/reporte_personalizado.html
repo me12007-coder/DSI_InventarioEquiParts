@@ -22,6 +22,8 @@
         .form-check-input:checked { background-color: #1D1D1F; border-color: #1D1D1F; }
     </style>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mojave-theme.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/material-expressive.css') }}">
+<script defer src="{{ url_for('static', filename='js/validacion-formularios.js') }}"></script>
 </head>
 <body class="bg-light">
     {% include 'includes/navbar.html' %}
@@ -36,6 +38,7 @@
             <p class="text-muted mb-4">Selecciona únicamente las columnas que deseas visualizar o exportar.</p>
             
             <form method="POST" action="{{ url_for('reportes.reporte_personalizado') }}">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <div class="row mb-4 bg-light p-3 rounded border">
                     {% for key, label in columnas_disponibles.items() %}
                     <div class="col-md-3 col-sm-6 mb-2">
