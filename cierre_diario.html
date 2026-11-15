@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Cierre diario de inventario | Equi-Parts</title>
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/navbar.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/inventario.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/mojave-theme.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/material-expressive.css') }}" rel="stylesheet">
+</head>
+<body class="bg-light">
+{% include 'includes/navbar.html' %}
+<main class="container-fluid px-4 py-4" style="max-width:1450px">
+  <div class="card border-0 shadow-sm rounded-4 p-4">
+    <div class="d-flex align-items-center flex-wrap gap-2 justify-content-between mb-3">
+      <div><h2 class="h4 fw-bold mb-1"><i class="bi bi-calendar-range me-2"></i>Cierre de inventario por día</h2>
+      <p class="text-muted small mb-0">Reconstrucción estimada del stock físico registrado al final de cada día, por producto.</p></div>
+      <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('reportes.generar_reporte') }}">Volver a reportes</a>
+    </div>
+    <form method="get" action="{{ url_for('reportes.reporte_cierre_diario') }}" class="row g-3 align-items-end p-3 rounded-3 border mb-3" id="rango-cierre">
+      <div class="col-md-4"><label for="desde" class="form-label fw-semibold">Fecha inicial</label>
+      <input type="date" id="desde" name="desde" class="form-control" max="{{ hoy }}" value="{{ desde }}" required></div>
+      <div class="col-md-4"><label for="hasta" class="form-label fw-semibold">Fecha final (posterior)</label>
+      <input type="date" id="hasta" name="hasta" class="form-control" max="{{ hoy }}" value="{{ hasta }}" required></div>
+      <div class="col-md-4"><button class="btn btn-primary w-100" type="submit"><i class="bi bi-search"></i> Generar reporte</button></div>
+    </form>
+    {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+    <div class="alert alert-warning small">
+      <strong>Importante:</strong> este reporte se estima retrocediendo desde el stock físico actual. Si hubo cambios directos de cantidad, purgas, movimientos desconocidos o cambios de fecha, puede no coincidir con el stock que hubo realmente. El estado REVISAR marca eventos no reconocidos o resultados negativos. Para cierres históricos exactos se necesitarán snapshots diarios almacenados desde ahora.
+    </div>
+    {% if desde and hasta and not error %}
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+      <h3 class="h6 m-0">{{ filas|length }} filas · {{ desde }} a {{ hasta }}</h3>
+      <a class="btn btn-success btn-sm" href="{{ url_for('reportes.reporte_cierre_diario', desde=desde, hasta=hasta, descargar='1') }}"><i class="bi bi-filetype-csv"></i> Descargar CSV</a>
+    </div>
+    <div class="table-responsive" style="max-height:65vh;overflow:auto"><table class="table table-striped table-hover table-sm align-middle">
+      <thead><tr><th>Fecha de cierre</th><th>SKU</th><th>Producto</th><th class="text-end">Stock físico</th><th>Validación</th></tr></thead>
+      <tbody>{% for fila in filas %}<tr><td>{{ fila.fecha }}</td><td>{{ fila.sku }}</td><td>{{ fila.nombre }}</td>
+      <td class="text-end fw-semibold">{{ fila.stock }}</td><td>{% if fila.estado == 'REVISAR' %}<span class="badge text-bg-warning">REVISAR</span>{% else %}{{ fila.estado }}{% endif %}</td></tr>{% else %}<tr><td colspan="5">Sin registros</td></tr>{% endfor %}</tbody>
+    </table></div>
+    {% endif %}
+  </div>
+</main>
+<script>
+(()=>{const a=document.getElementById('desde'),b=document.getElementById('hasta'),f=document.getElementById('rango-cierre');
+const ajustar=()=>{if(a.value){const d=new Date(a.value+'T12:00:00');d.setDate(d.getDate()+1);const min=[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');b.min=min;if(b.value&&b.value<min)b.value='';}else b.removeAttribute('min')};
+a.addEventListener('change',ajustar);ajustar(); f.addEventListener('submit',e=>{if(!a.value||!b.value||b.value<=a.value){e.preventDefault();alert('La fecha final debe ser posterior a la inicial.');}});
+})();
+</script>
+</body></html>

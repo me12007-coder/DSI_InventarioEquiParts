@@ -1,0 +1,54 @@
+
+# EQUIPARTS-CIERRE-DIARIO-1111: stock físico estimado por día (solo lectura).
+@reportes_bp.route('/reporte/cierre-diario', methods=['GET'])
+def reporte_cierre_diario():
+    from datetime import date, timedelta
+    from app.cierre_diario import construir_cierres
+
+    if 'user_id' not in session or session.get('rol') != 'Administrador':
+        return redirect(url_for('inventario.inventario'))
+    desde = request.args.get('desde', '').strip()
+    hasta = request.args.get('hasta', '').strip()
+    filas, error = [], None
+    if desde or hasta:
+        try:
+            inicio = date.fromisoformat(desde)
+            fin = date.fromisoformat(hasta)
+            if fin <= inicio:
+                raise ValueError('La fecha de fin debe ser posterior a la de inicio.')
+            if fin > date.today():
+                raise ValueError('No se permiten fechas futuras.')
+            if (fin - inicio).days > 89:
+                raise ValueError('El intervalo máximo es de 90 días, incluyendo ambos extremos.')
+        except (TypeError, ValueError) as exc:
+            error = str(exc) if 'fecha' in str(exc).lower() or 'intervalo' in str(exc).lower() else 'Selecciona dos fechas válidas.'
+        if not error:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            try:
+                cursor.execute('SELECT id, sku, nombre, cantidad FROM productos ORDER BY sku, id')
+                productos = cursor.fetchall()
+                cursor.execute('''SELECT id, producto_id, fecha, tipo, cantidad FROM movimientos
+                                  WHERE fecha >= %s ORDER BY fecha DESC, id DESC''',
+                               (inicio.strftime('%Y-%m-%d 00:00:00'),))
+                eventos = cursor.fetchall()
+                filas = construir_cierres(productos, eventos, inicio, fin)
+            finally:
+                cursor.close()
+                conn.close()
+            if request.args.get('descargar') == '1':
+                buf = io.StringIO(newline='')
+                escritor = csv.writer(buf)
+                escritor.writerow(['Fecha cierre', 'SKU', 'Producto', 'Stock físico estimado', 'Estado cálculo'])
+                for r in filas:
+                    sku = str(r['sku'] or '')
+                    nombre = str(r['nombre'] or '')
+                    def safe_csv(s):
+                        return "'" + s if s.lstrip().startswith(('=', '+', '-', '@', '\t', '\r', '\n')) else s
+                    escritor.writerow([r['fecha'], safe_csv(sku), safe_csv(nombre), r['stock'], r['estado']])
+                return Response('\ufeff' + buf.getvalue(), mimetype='text/csv; charset=utf-8',
+                                headers={'Content-Disposition': f'attachment; filename="Cierre_Diario_{desde}_a_{hasta}.csv"',
+                                         'Cache-Control': 'no-store'})
+    return render_template('cierre_diario.html', desde=desde, hasta=hasta,
+                           filas=filas, error=error, username=session.get('username'),
+                           hoy=__import__('datetime').date.today().isoformat())
