@@ -1,0 +1,59 @@
+
+
+# EQUIPARTS-STOCK-ACTUAL-1110 — descarga de existencias, sin reconstrucción histórica.
+@reportes_bp.route('/exportar_inventario_actual_csv', methods=['GET'])
+def exportar_inventario_actual_csv():
+    """CSV de la fotografía actual del stock físico (no del histórico)."""
+    if 'user_id' not in session or session.get('rol') not in ('Administrador', 'Bodeguero'):
+        return redirect(url_for('inventario.inventario'))
+
+    incluir_inactivos = request.args.get('incluir_inactivos') == '1'
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Archivado existe únicamente en instalaciones actualizadas.
+        cursor.execute("SHOW COLUMNS FROM productos LIKE 'archivado'")
+        tiene_archivado = bool(cursor.fetchone())
+        filtro = ' WHERE COALESCE(p.archivado, 0) = 0' if tiene_archivado else ' WHERE 1=1'
+        if not incluir_inactivos:
+            filtro += ' AND p.activo = 1'
+        consulta = ("SELECT p.sku, p.nombre, p.descripcion, p.cantidad, "
+                    "p.stock_reservado, p.stock_minimo, p.precio, p.activo, "
+                    "c.nombre AS categoria "
+                    "FROM productos p LEFT JOIN categorias c ON c.id = p.categoria_id"
+                    + filtro + ' ORDER BY p.sku, p.id')
+        cursor.execute(consulta)
+        productos = cursor.fetchall()
+    finally:
+        cursor.close()
+        conn.close()
+
+    def seguro_csv(valor):
+        # Evita ejecución de fórmulas si el CSV se abre con Excel/Calc.
+        if valor is None:
+            return ''
+        texto = str(valor)
+        if texto.lstrip().startswith(('=', '+', '-', '@', '\t', '\r', '\n')):
+            return "'" + texto
+        return texto
+
+    salida = io.StringIO(newline='')
+    escritor = csv.writer(salida)
+    escritor.writerow(['SKU', 'Nombre', 'Categoria', 'Descripcion',
+                       'Stock fisico', 'Stock reservado', 'Stock disponible',
+                       'Stock minimo', 'Precio unitario', 'Valor stock fisico', 'Estado'])
+    for p in productos:
+        fisico = int(p['cantidad'] or 0)
+        reservado = int(p['stock_reservado'] or 0)
+        precio = p['precio'] or 0
+        escritor.writerow([
+            seguro_csv(p['sku']), seguro_csv(p['nombre']), seguro_csv(p['categoria']),
+            seguro_csv(p['descripcion']), fisico, reservado, fisico - reservado,
+            int(p['stock_minimo'] or 0), precio, fisico * precio,
+            'Activo' if p['activo'] else 'Inactivo'
+        ])
+    fecha = datetime.now().strftime('%Y%m%d_%H%M%S')
+    nombre = f'Inventario_Actual_EquiParts_{fecha}.csv'
+    return Response('\ufeff' + salida.getvalue(), mimetype='text/csv; charset=utf-8',
+                    headers={'Content-Disposition': f'attachment; filename="{nombre}"',
+                             'Cache-Control': 'no-store'})
