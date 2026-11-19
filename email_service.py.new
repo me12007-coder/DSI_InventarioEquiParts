@@ -1,0 +1,51 @@
+"""Alertas de stock: enviar por SMTP sin alterar movimientos de inventario.
+
+No crea filas en movimientos: el correo es una notificación, no un cambio de stock.
+"""
+import logging
+import smtplib
+from flask import current_app
+from flask_mail import Message
+from app import mail
+
+
+def enviar_alerta_stock(nombre_producto, sku, stock_actual, correos_destino, producto_id, usuario_id):
+    """Devuelve True solo cuando Flask-Mail confirma que transmitió el mensaje.
+
+    El destinatario final puede filtrar/rechazar mensajes posteriormente.
+    """
+    destinatarios = [d.strip() for d in (correos_destino or []) if isinstance(d, str) and d.strip()]
+    if not destinatarios:
+        current_app.logger.warning('Alerta de stock sin destinatarios: producto_id=%s', producto_id)
+        return False
+
+    if not current_app.config.get('MAIL_USERNAME') or not current_app.config.get('MAIL_PASSWORD'):
+        current_app.logger.error('Alerta de stock omitida: credenciales SMTP sin configurar')
+        return False
+
+    asunto = f'ALERTA DE STOCK CRÍTICO: {nombre_producto}'
+    cuerpo = (f'SISTEMA DE INVENTARIO EQUI-PARTS S&S\n'
+              f'Alerta automática de reabastecimiento\n\n'
+              f'Producto: {nombre_producto}\nSKU: {sku}\n'
+              f'Stock disponible: {stock_actual} unidades\n\n'
+              'Por favor, gestione el reabastecimiento.')
+    try:
+        msg = Message(subject=asunto,
+                      sender=current_app.config['MAIL_USERNAME'],
+                      recipients=destinatarios, body=cuerpo)
+        mail.send(msg)
+        current_app.logger.info('Alerta SMTP transmitida: producto_id=%s, destinatarios=%d',
+                                producto_id, len(destinatarios))
+        return True
+    except smtplib.SMTPAuthenticationError as exc:
+        current_app.logger.error('Alerta SMTP rechazada por autenticación: código=%s, producto_id=%s',
+                                 exc.smtp_code, producto_id)
+    except smtplib.SMTPServerDisconnected:
+        current_app.logger.error('Alerta SMTP: conexión cerrada durante envío/autenticación, producto_id=%s',
+                                 producto_id)
+    except (smtplib.SMTPException, OSError, TimeoutError) as exc:
+        current_app.logger.error('Alerta SMTP fallida: tipo=%s, producto_id=%s',
+                                 type(exc).__name__, producto_id)
+    except Exception:
+        current_app.logger.exception('Error inesperado en alerta de stock: producto_id=%s', producto_id)
+    return False

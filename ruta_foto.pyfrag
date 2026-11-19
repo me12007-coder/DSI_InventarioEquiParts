@@ -1,0 +1,46 @@
+
+@inventario_bp.route('/producto/<int:id>/foto/<int:foto_id>/eliminar', methods=['POST'])
+def eliminar_foto_producto(id, foto_id):
+    """Retira una foto concreta preservando las demás y la imagen principal."""
+    if 'user_id' not in session or session.get('rol') not in ('Administrador', 'Bodeguero'):
+        return redirect(url_for('auth.login'))
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute('SELECT id FROM productos WHERE id=%s FOR UPDATE', (id,))
+            if not cursor.fetchone():
+                flash('Producto no encontrado.', 'warning')
+                return redirect(url_for('inventario.inventario'))
+
+            cursor.execute(
+                'SELECT id, archivo, principal FROM producto_fotos '
+                'WHERE id=%s AND producto_id=%s FOR UPDATE', (foto_id, id))
+            foto = cursor.fetchone()
+            if not foto:
+                flash('La imagen ya fue eliminada o no pertenece a este producto.', 'warning')
+                return redirect(url_for('inventario.editar_producto', id=id))
+
+            cursor.execute('DELETE FROM producto_fotos WHERE id=%s AND producto_id=%s', (foto_id, id))
+            cursor.execute('SELECT id, archivo FROM producto_fotos WHERE producto_id=%s '
+                           'ORDER BY principal DESC, id ASC FOR UPDATE', (id,))
+            restantes = cursor.fetchall()
+            cursor.execute('UPDATE producto_fotos SET principal=0 WHERE producto_id=%s', (id,))
+            if restantes:
+                nueva_principal = restantes[0]
+                cursor.execute('UPDATE producto_fotos SET principal=1 WHERE id=%s', (nueva_principal['id'],))
+                cursor.execute('UPDATE productos SET foto=%s WHERE id=%s', (nueva_principal['archivo'], id))
+            else:
+                cursor.execute("UPDATE productos SET foto='' WHERE id=%s", (id,))
+        conn.commit()
+        flash('Fotografía retirada correctamente. Las otras fotografías se conservaron.', 'success')
+    except Exception:
+        conn.rollback()
+        current_app.logger.exception('Error eliminando foto %s del producto %s', foto_id, id)
+        flash('No se pudo retirar la fotografía. Consulta los registros.', 'danger')
+    finally:
+        conn.close()
+    # No se borra el archivo físico: permite recuperación ante errores y evita
+    # eliminar una imagen compartida con otros registros por su nombre.
+    return redirect(url_for('inventario.editar_producto', id=id))
+
